@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+export KUBECONFIG=$(realpath ${1:-../cluster/coreos-kubernetes/multi-node/vagrant/kubeconfig})

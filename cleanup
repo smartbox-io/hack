@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+info() {
+    echo "[I] $1"
+}
+
+. ./env $2
+
+SMARTBOX_PATH=$(realpath ${1:-..})
+CLUSTER_PATH=$(realpath ${2:-$SMARTBOX_PATH/cluster/coreos-kubernetes/multi-node/vagrant})
+MANIFESTS_PATH=$(realpath $SMARTBOX_PATH/cluster/manifests)
+
+info "Deleting k8s persistent volume claim"
+kubectl delete pvc smartbox-dev-nfs
+
+info "Deleting k8s persistent volume"
+kubectl delete pv smartbox-dev-nfs
+
+for definition in brain cell; do
+    info "Deleting $definition"
+    kubectl delete -f $MANIFESTS_PATH/$definition.yaml
+done
+
+info "Stopping k8s"
+(cd $CLUSTER_PATH && vagrant halt)
+
+info "Stopping NFS server"
+docker rm -f smartbox-dev-nfs
