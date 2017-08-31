@@ -30,9 +30,6 @@ sudo modprobe nfsd || fatal "could not load nfs kernel module -- NFS exports won
 info "Starting NFS server"
 docker run -d -v $SMARTBOX_PATH:$SMARTBOX_PATH --network=host --name smartbox-dev-nfs --privileged cpuguy83/nfs-server $SMARTBOX_PATH &> /dev/null
 
-info "Starting k8s"
-(cd $CLUSTER_PATH && vagrant up)
-
 info "Creating k8s persistent volume"
 sed "s/NFS_SERVER_IP_ADDRESS/$DEFAULT_INTERFACE_IP/" manifests/pv.yaml | kubectl apply -f -
 
