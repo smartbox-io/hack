@@ -12,7 +12,6 @@ info() {
 . ./env $2
 
 SMARTBOX_PATH=$(realpath ${1:-..})
-CLUSTER_PATH=$(realpath ${2:-$SMARTBOX_PATH/cluster/coreos-kubernetes/multi-node/vagrant})
 MANIFESTS_PATH=$(realpath $SMARTBOX_PATH/cluster/manifests)
 
 DEFAULT_INTERFACE=$(awk '$2 == 00000000 { print $1 }' /proc/net/route)
@@ -20,6 +19,9 @@ DEFAULT_INTERFACE_IP=$(ip addr show $DEFAULT_INTERFACE | awk '$1 == "inet" {prin
 
 info "Requesting sudo"
 sudo -v
+
+info "Starting Kubernetes"
+minikube start --vm-driver=kvm
 
 info "SMARTBOX_PATH: $SMARTBOX_PATH"
 info "KUBECONFIG: $KUBECONFIG"
