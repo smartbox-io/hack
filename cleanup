@@ -4,8 +4,6 @@ info() {
     echo "[I] $1"
 }
 
-. ./env $2
-
 SMARTBOX_PATH=$(realpath ${1:-..})
 CLUSTER_PATH=$(realpath ${2:-$SMARTBOX_PATH/cluster/coreos-kubernetes/multi-node/vagrant})
 MANIFESTS_PATH=$(realpath $SMARTBOX_PATH/cluster/manifests)
@@ -21,8 +19,8 @@ for definition in brain cell; do
     kubectl delete -f $MANIFESTS_PATH/$definition.yaml
 done
 
-info "Stopping k8s"
-(cd $CLUSTER_PATH && vagrant halt)
+info "Stopping Kubernetes"
+minikube stop
 
 info "Stopping NFS server"
 docker rm -f smartbox-dev-nfs

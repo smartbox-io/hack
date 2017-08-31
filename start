@@ -9,8 +9,6 @@ info() {
     echo "[I] $1"
 }
 
-. ./env $2
-
 SMARTBOX_PATH=$(realpath ${1:-..})
 MANIFESTS_PATH=$(realpath $SMARTBOX_PATH/cluster/manifests)
 
