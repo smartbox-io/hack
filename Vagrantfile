@@ -47,8 +47,10 @@ Vagrant.configure("2") do |config|
       box.vm.hostname = "worker#{i + 1}"
       box.vm.box = "ubuntu/xenial64"
       box.vm.network :private_network, ip: machine_ip(i + 1)
+      box.vm.synced_folder File.expand_path(".."), "/smartbox-io", type: :nfs
       box.vm.provision "shell", inline: provision_code
       box.vm.provision "shell", inline: "kubeadm join --token #{token} #{machine_ip 0}:6443"
+      box.vm.provision "shell", inline: "mkdir -p /smartbox-io"
     end
   end
 end

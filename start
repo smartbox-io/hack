@@ -9,6 +9,8 @@ info() {
     echo "[I] $1"
 }
 
+. ./env $2
+
 SMARTBOX_PATH=$(realpath ${1:-..})
 MANIFESTS_PATH=$(realpath $SMARTBOX_PATH/cluster/manifests)
 
@@ -19,22 +21,10 @@ info "Requesting sudo"
 sudo -v
 
 info "Starting Kubernetes"
-minikube start --vm-driver=kvm
+vagrant up
 
 info "SMARTBOX_PATH: $SMARTBOX_PATH"
 info "KUBECONFIG: $KUBECONFIG"
-
-info "Loading kernel module"
-sudo modprobe nfsd || fatal "could not load nfs kernel module -- NFS exports won't work"
-
-info "Starting NFS server"
-docker run -d -v $SMARTBOX_PATH:$SMARTBOX_PATH --network=host --name smartbox-dev-nfs --privileged cpuguy83/nfs-server $SMARTBOX_PATH &> /dev/null
-
-info "Creating k8s persistent volume"
-sed "s/NFS_SERVER_IP_ADDRESS/$DEFAULT_INTERFACE_IP/" manifests/pv.yaml | kubectl apply -f -
-
-info "Creating k8s persistent volume claim"
-kubectl apply -f manifests/pvc.yaml
 
 for definition in brain-config cell-config; do
     info "Creating $definition"
