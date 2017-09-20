@@ -30,9 +30,9 @@ def network_cidr
 end
 
 Vagrant.configure("2") do |config|
-  config.vm.define "master" do |box|
+  config.vm.define "master", primary: true do |box|
     box.vm.hostname = "master"
-    box.vm.box = "ubuntu/xenial64"
+    box.vm.box = "ceph/ubuntu-xenial"
     box.vm.network :private_network, ip: machine_ip(0)
     box.vm.provision "shell", inline: provision_code
     box.vm.provision "shell", inline: "kubeadm init --apiserver-advertise-address #{machine_ip 0} --skip-preflight-checks --pod-network-cidr #{network_cidr} --token #{token}"
@@ -45,7 +45,7 @@ Vagrant.configure("2") do |config|
   3.times do |i|
     config.vm.define "worker#{i + 1}" do |box|
       box.vm.hostname = "worker#{i + 1}"
-      box.vm.box = "ubuntu/xenial64"
+      box.vm.box = "ceph/ubuntu-xenial"
       box.vm.network :private_network, ip: machine_ip(i + 1)
       box.vm.synced_folder File.expand_path(".."), "/smartbox-io", type: :nfs
       box.vm.provision "shell", inline: provision_code
