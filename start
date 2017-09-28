@@ -1,9 +1,20 @@
 #!/usr/bin/env bash
 
 POOL=${POOL:-default}
+WORKERS=2
 
 IMAGE=xenial-server-cloudimg-amd64-disk1.img
 BASE_URL=https://cloud-images.ubuntu.com/xenial/current
+
+while [[ $# > 0 ]] ; do
+  case $1 in
+    -w|--workers)
+      WORKERS="$2"
+      shift
+      ;;
+  esac
+  shift
+done
 
 fatal() {
     echo "$1; quitting"
@@ -13,8 +24,6 @@ fatal() {
 info() {
     echo "[I] $1"
 }
-
-. ./env $2
 
 SMARTBOX_PATH=$(realpath ${1:-..})
 MANIFESTS_PATH=$(realpath $SMARTBOX_PATH/cluster/manifests)
@@ -26,6 +35,18 @@ fi
 if [ ! -f tmp/$IMAGE ]; then
     wget $BASE_URL/$IMAGE -O tmp/$IMAGE
 fi
+
+machine_ip() {
+    echo "172.17.4.$(($1 + 100))"
+}
+
+network_cidr() {
+    echo "10.244.0.0/16"
+}
+
+token() {
+    echo "e6ac8e.43f6980db7a3d88d"
+}
 
 build_cloudinit() {
     WORKDIR=$(mktemp -d cloudinit-$1-XXXXXXXX)
@@ -46,6 +67,12 @@ runcmd:
   - apt-get update
   - apt-get install -y kubelet kubeadm
 EOF
+
+    if [ $1 == "master" ]; then
+      cat >> $WORKDIR/user-data <<EOF
+  - kubeadm init --apiserver-advertise-address $(machine_ip 0) --skip-preflight-checks --pod-network-cidr $(network_cidr) --token $(token)
+EOF
+    fi
 
     genisoimage -output $WORKDIR/cloudinit-$1.iso -volid cidata -joliet -rock $WORKDIR/{user,meta}-data
 
@@ -69,9 +96,12 @@ build_vm() {
                  --os-type linux \
                  --os-variant generic \
                  --network network=default \
-                 --graphics none \
+                 --graphics vnc,listen=0.0.0.0 \
                  --disk vol=$POOL/$1.img,format=qcow2,bus=virtio,cache=writeback \
-                 --disk vol=$POOL/cloudinit-$1.iso,bus=virtio
+                 --disk vol=$POOL/cloudinit-$1.iso,bus=virtio &> /dev/null &
 }
 
 build_vm "master"
+for i in $(seq 1 $WORKERS); do
+    build_vm "worker$i"
+done
