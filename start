@@ -38,6 +38,7 @@ EOF
 
     cat > $WORKDIR/user-data <<EOF
 #cloud-config
+password: linux
 runcmd:
   - apt-get update && apt-get install -y apt-transport-https docker.io
   - curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
