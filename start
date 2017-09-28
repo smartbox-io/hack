@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+POOL=${POOL:-default}
+
+IMAGE=xenial-server-cloudimg-amd64-disk1.img
+BASE_URL=https://cloud-images.ubuntu.com/xenial/current
+
 fatal() {
     echo "$1; quitting"
     exit 1
@@ -14,30 +19,58 @@ info() {
 SMARTBOX_PATH=$(realpath ${1:-..})
 MANIFESTS_PATH=$(realpath $SMARTBOX_PATH/cluster/manifests)
 
-DEFAULT_INTERFACE=$(awk '$2 == 00000000 { print $1 }' /proc/net/route)
-DEFAULT_INTERFACE_IP=$(ip addr show $DEFAULT_INTERFACE | awk '$1 == "inet" {print $2}' | cut -f1 -d/)
+if [ -z $LIBVIRT_DEFAULT_URI ]; then
+    info "Since LIBVIRT_DEFAULT_URI envvar is blank, qemu:///system will be used"
+fi
 
-info "Requesting sudo"
-sudo -v
+if [ ! -f tmp/$IMAGE ]; then
+    wget $BASE_URL/$IMAGE -O tmp/$IMAGE
+fi
 
-info "Starting Kubernetes"
-vagrant up
+build_cloudinit() {
+    WORKDIR=$(mktemp -d cloudinit-$1-XXXXXXXX)
 
-info "SMARTBOX_PATH: $SMARTBOX_PATH"
-info "KUBECONFIG: $KUBECONFIG"
+    cat > $WORKDIR/meta-data <<EOF
+instance-id: $1
+hostname: $1
+local-hostname: $1
+EOF
 
-for definition in brain-config cell-config; do
-    info "Creating $definition"
-    kubectl apply -f $MANIFESTS_PATH/$definition.yaml
-done
+    cat > $WORKDIR/user-data <<EOF
+#cloud-config
+runcmd:
+  - apt-get update && apt-get install -y apt-transport-https docker.io
+  - curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+  - echo 'deb http://apt.kubernetes.io/ kubernetes-xenial main' > /etc/apt/sources.list.d/kubernetes.list
+  - apt-get update
+  - apt-get install -y kubelet kubeadm
+EOF
 
-info "Updating brain-config"
-kubectl apply -f manifests/brain-config.yaml
+    genisoimage -output $WORKDIR/cloudinit-$1.iso -volid cidata -joliet -rock $WORKDIR/{user,meta}-data
 
-info "Updating cell-config"
-kubectl apply -f manifests/cell-config.yaml
+    virsh vol-create-as --pool $POOL --name cloudinit-$1.iso --capacity 5M --format raw
+    virsh vol-upload --pool $POOL --vol cloudinit-$1.iso --file $WORKDIR/cloudinit-$1.iso
 
-for definition in mysql mongodb redis brain-secrets cell-secrets brain cell; do
-    info "Creating $definition"
-    kubectl apply -f $MANIFESTS_PATH/$definition.yaml
-done
+    rm -rf $WORKDIR
+}
+
+build_vm() {
+    build_cloudinit $1
+    virsh vol-create-as --pool $POOL --name $1.img --capacity 10G --format qcow2 --prealloc-metadata
+    virsh vol-upload --pool $POOL --vol $1.img --file tmp/$IMAGE
+    virt-install --name $1 \
+                 --vcpus 2 \
+                 --cpu host \
+                 --ram 2048 \
+                 --autostart \
+                 --memballoon virtio \
+                 --boot hd \
+                 --os-type linux \
+                 --os-variant generic \
+                 --network network=default \
+                 --graphics none \
+                 --disk vol=$POOL/$1.img,format=qcow2,bus=virtio,cache=writeback \
+                 --disk vol=$POOL/cloudinit-$1.iso,bus=virtio
+}
+
+build_vm "master"
