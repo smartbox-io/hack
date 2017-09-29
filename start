@@ -39,14 +39,6 @@ if [ ! -f tmp/$IMAGE ]; then
     wget $BASE_URL/$IMAGE -O tmp/$IMAGE
 fi
 
-machine_ip() {
-    echo "172.17.4.$(($1 + 100))"
-}
-
-network_cidr() {
-    echo "10.244.0.0/16"
-}
-
 token() {
     echo "e6ac8e.43f6980db7a3d88d"
 }
@@ -55,15 +47,16 @@ build_cloudinit() {
     WORKDIR=$(mktemp -d cloudinit-$1-XXXXXXXX)
 
     cat > $WORKDIR/meta-data <<EOF
-instance-id: $1
-hostname: $1
-local-hostname: $1
+instance-id: iid-$1
 EOF
 
     cat > $WORKDIR/user-data <<EOF
 #cloud-config
+hostname: $1
+fqdn: $1.smartbox.io
 password: linux
 runcmd:
+  - systemctl restart networking
   - apt-get update && apt-get install -y apt-transport-https docker.io
   - curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
   - echo 'deb http://apt.kubernetes.io/ kubernetes-xenial main' > /etc/apt/sources.list.d/kubernetes.list
@@ -71,9 +64,15 @@ runcmd:
   - apt-get install -y kubelet kubeadm
 EOF
 
-    if [ $1 == "master" ]; then
-      cat >> $WORKDIR/user-data <<EOF
-  - kubeadm init --apiserver-advertise-address $(machine_ip 0) --skip-preflight-checks --pod-network-cidr $(network_cidr) --token $(token)
+    if [[ "$1" =~ ^master ]]; then
+        cat >> $WORKDIR/user-data <<EOF
+  - kubeadm init --apiserver-advertise-address \$(dig $1 +short) --skip-preflight-checks --pod-network-cidr 10.244.0.0/16 --token $(token)
+  - kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/coreos/flannel/v0.8.0/Documentation/kube-flannel.yml
+  - kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/coreos/flannel/v0.8.0/Documentation/kube-flannel-rbac.yml
+EOF
+    else
+        cat >> $WORKDIR/user-data <<EOF
+  - kubeadm join --token $(token) master:6443
 EOF
     fi
 
@@ -83,6 +82,29 @@ EOF
     virsh vol-upload --pool $POOL --vol cloudinit-$1.iso --file $WORKDIR/cloudinit-$1.iso &> /dev/null
 
     rm -rf $WORKDIR
+}
+
+build_network() {
+    info "Setting network up"
+    virsh net-destroy smartbox &> /dev/null
+    virsh net-undefine smartbox &> /dev/null
+    network_definition=$(mktemp)
+    cat > $network_definition <<'EOF'
+      <network>
+        <name>smartbox</name>
+        <bridge name="virbr10"/>
+        <forward/>
+        <ip address="192.168.200.1" netmask="255.255.255.0">
+          <dhcp>
+            <range start="192.168.200.2" end="192.168.200.254"/>
+          </dhcp>
+        </ip>
+        <domain name="smartbox.io" localOnly="yes"/>
+      </network>
+EOF
+    virsh net-define $network_definition &> /dev/null
+    virsh net-start smartbox &> /dev/null
+    virsh net-autostart smartbox &> /dev/null
 }
 
 build_vm() {
@@ -98,12 +120,14 @@ build_vm() {
                  --boot hd \
                  --os-type linux \
                  --os-variant generic \
-                 --network network=default \
+                 --network network=smartbox \
                  --graphics none \
                  --disk vol=$POOL/$1.img,format=qcow2,bus=virtio,cache=writeback \
-                 --disk vol=$POOL/cloudinit-$1.iso,bus=virtio &> /dev/null & &> /dev/null
+                 --disk vol=$POOL/cloudinit-$1.iso,bus=virtio &> /dev/null &
     info "Machine $1 created"
 }
+
+build_network
 
 build_vm "master"
 for i in $(seq 1 $WORKERS); do
