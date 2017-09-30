@@ -3,6 +3,7 @@
 POOL=${POOL:-default}
 WORKERS=2
 LIBVIRT_DEFAULT_URI="qemu:///system"
+DISK_SIZE=10G
 
 IMAGE=xenial-server-cloudimg-amd64-disk1.img
 BASE_URL=https://cloud-images.ubuntu.com/xenial/current
@@ -105,12 +106,24 @@ EOF
     virsh net-define $network_definition &> /dev/null
     virsh net-start smartbox &> /dev/null
     virsh net-autostart smartbox &> /dev/null
+    info "Network configured"
+}
+
+build_volumes() {
+    info "Building volumes"
+    if ! virsh vol-list --pool $POOL | grep $IMAGE &> /dev/null; then
+        info "Uploading $IMAGE"
+        virsh vol-create-as --pool $POOL --name $IMAGE --capacity $(wc -c tmp/$IMAGE | cut -d' ' -f1) --format qcow2 --prealloc-metadata &> /dev/null
+        virsh vol-upload --pool $POOL --vol $IMAGE --file tmp/$IMAGE &> /dev/null
+    fi
+    virsh vol-create-as --pool $POOL --name $1.img --capacity $DISK_SIZE --format qcow2 --backing-vol $IMAGE --backing-vol-format qcow2 &> /dev/null
+    info "Volumes built"
 }
 
 build_vm() {
+    info "Building machine $1"
     build_cloudinit $1
-    virsh vol-create-as --pool $POOL --name $1.img --capacity 10G --format qcow2 --prealloc-metadata &> /dev/null
-    virsh vol-upload --pool $POOL --vol $1.img --file tmp/$IMAGE &> /dev/null
+    build_volumes $1
     virt-install --name $1 \
                  --vcpus 2 \
                  --cpu host \
