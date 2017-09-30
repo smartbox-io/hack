@@ -44,6 +44,10 @@ token() {
     echo "e6ac8e.43f6980db7a3d88d"
 }
 
+disk_size() {
+    wc -c $1 | cut -d' ' -f1
+}
+
 build_cloudinit() {
     WORKDIR=$(mktemp -d cloudinit-$1-XXXXXXXX)
 
@@ -55,7 +59,8 @@ EOF
 #cloud-config
 hostname: $1
 fqdn: $1.smartbox.io
-password: linux
+ssh_authorized_keys:
+  - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDYhRewFL7luLkp0L8PD+9nY0NS6mb5HeAf623XKg6Jjyoipvaqgjh4Km5sod0RGxDRFne7uazB0CAt5srovU0nnVmoTBCJYs84/0dHj6X+66GP1qMLCBs/n6cnUBraDi82bBrknXAqEHs4ujHpslmJEaoL4OOJW3Q42e1lWTpLyjqiV2m1YVpTmrHxvDsSfPto+gM4ssKC4YZW4EdUp/BK79GDdj3KiSTqhclvP5m1MLzQ3/Xy3kNr+HfKx8NdHZAF/+qeOcQHwX2OH88mrZvSJppcmR/Ru/yTV13gUs8SRfHYSFgm/pF7c+UcWQSfHjUtH6OxFUipHznBZs03qFtl insecure@key
 runcmd:
   - systemctl restart networking
   - apt-get update && apt-get install -y apt-transport-https docker.io
@@ -79,7 +84,7 @@ EOF
 
     genisoimage -output $WORKDIR/cloudinit-$1.iso -volid cidata -joliet -rock $WORKDIR/{user,meta}-data &> /dev/null
 
-    virsh vol-create-as --pool $POOL --name cloudinit-$1.iso --capacity 5M --format raw &> /dev/null
+    virsh vol-create-as --pool $POOL --name cloudinit-$1.iso --capacity $(disk_size "$WORKDIR/cloudinit-$1.iso") --format raw &> /dev/null
     virsh vol-upload --pool $POOL --vol cloudinit-$1.iso --file $WORKDIR/cloudinit-$1.iso &> /dev/null
 
     rm -rf $WORKDIR
@@ -113,7 +118,7 @@ build_volumes() {
     info "Building volumes"
     if ! virsh vol-list --pool $POOL | grep $IMAGE &> /dev/null; then
         info "Uploading $IMAGE"
-        virsh vol-create-as --pool $POOL --name $IMAGE --capacity $(wc -c tmp/$IMAGE | cut -d' ' -f1) --format qcow2 --prealloc-metadata &> /dev/null
+        virsh vol-create-as --pool $POOL --name $IMAGE --capacity $(disk_size "tmp/$IMAGE") --format qcow2 --prealloc-metadata &> /dev/null
         virsh vol-upload --pool $POOL --vol $IMAGE --file tmp/$IMAGE &> /dev/null
     fi
     virsh vol-create-as --pool $POOL --name $1.img --capacity $DISK_SIZE --format qcow2 --backing-vol $IMAGE --backing-vol-format qcow2 &> /dev/null
