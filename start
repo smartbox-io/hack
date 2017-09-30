@@ -11,7 +11,7 @@ BASE_URL=https://cloud-images.ubuntu.com/xenial/current
 while [[ $# > 0 ]] ; do
     case $1 in
         -c|--connection)
-            export LIBVIRT_DEFAULT_URI="$2"
+            export LIBVIRT_DEFAULT_URI="qemu+ssh://$2/system"
             shift
             ;;
         -w|--workers)
