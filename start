@@ -138,14 +138,9 @@ EOF
     info "Network configured"
 }
 
-build_volumes() {
-    info "Building volumes"
-    if ! virsh vol-list --pool $POOL | grep $IMAGE &> /dev/null; then
-        info "Uploading $IMAGE"
-        virsh vol-create-as --pool $POOL --name $IMAGE --capacity $(disk_size "tmp/$IMAGE") --format qcow2 --prealloc-metadata &> /dev/null
-        virsh vol-upload --pool $POOL --vol $IMAGE --file tmp/$IMAGE &> /dev/null
-    fi
+build_volume_base() {
     if ! virsh vol-list --pool $POOL | grep $IMAGE_NAME-with-deps.img &> /dev/null; then
+        info "Building base image with dependencies included"
         build_cloudinit_bootstrap
         virsh vol-create-as --pool $POOL --name $IMAGE_NAME-with-deps.img --capacity $DISK_SIZE --format qcow2 --backing-vol $IMAGE --backing-vol-format qcow2 &> /dev/null
         virt-install --name image-bootstrap \
@@ -160,9 +155,19 @@ build_volumes() {
                      --network network=smartbox \
                      --graphics none \
                      --disk vol=$POOL/$IMAGE_NAME-with-deps.img,format=qcow2,bus=virtio,cache=writeback \
-                     --disk vol=$POOL/cloudinit-bootstrap.iso,bus=virtio
-        virsh undefine image-bootstrap
+                     --disk vol=$POOL/cloudinit-bootstrap.iso,bus=virtio &> /dev/null
+        virsh undefine image-bootstrap &> /dev/null
     fi
+}
+
+build_volumes() {
+    info "Building volumes"
+    if ! virsh vol-list --pool $POOL | grep $IMAGE &> /dev/null; then
+        info "Uploading $IMAGE"
+        virsh vol-create-as --pool $POOL --name $IMAGE --capacity $(disk_size "tmp/$IMAGE") --format qcow2 --prealloc-metadata &> /dev/null
+        virsh vol-upload --pool $POOL --vol $IMAGE --file tmp/$IMAGE &> /dev/null
+    fi
+    build_volume_base
     virsh vol-create-as --pool $POOL --name $1.img --capacity $DISK_SIZE --format qcow2 --backing-vol $IMAGE_NAME-with-deps.img --backing-vol-format qcow2 &> /dev/null
     info "Volumes built"
 }
