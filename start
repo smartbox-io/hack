@@ -5,7 +5,8 @@ WORKERS=2
 LIBVIRT_DEFAULT_URI="qemu:///system"
 DISK_SIZE=10G
 
-IMAGE=xenial-server-cloudimg-amd64-disk1.img
+IMAGE_NAME=xenial-server-cloudimg-amd64-disk1
+IMAGE=$IMAGE_NAME.img
 BASE_URL=https://cloud-images.ubuntu.com/xenial/current
 
 while [[ $# > 0 ]] ; do
@@ -48,6 +49,34 @@ disk_size() {
     wc -c $1 | cut -d' ' -f1
 }
 
+build_cloudinit_bootstrap() {
+    WORKDIR=$(mktemp -d cloudinit-bootstrap-XXXXXXXX)
+
+    cat > $WORKDIR/meta-data <<EOF
+instance-id: iid-cloudinit-bootstrap
+EOF
+
+    cat > $WORKDIR/user-data <<EOF
+#cloud-config
+ssh_authorized_keys:
+  - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDYhRewFL7luLkp0L8PD+9nY0NS6mb5HeAf623XKg6Jjyoipvaqgjh4Km5sod0RGxDRFne7uazB0CAt5srovU0nnVmoTBCJYs84/0dHj6X+66GP1qMLCBs/n6cnUBraDi82bBrknXAqEHs4ujHpslmJEaoL4OOJW3Q42e1lWTpLyjqiV2m1YVpTmrHxvDsSfPto+gM4ssKC4YZW4EdUp/BK79GDdj3KiSTqhclvP5m1MLzQ3/Xy3kNr+HfKx8NdHZAF/+qeOcQHwX2OH88mrZvSJppcmR/Ru/yTV13gUs8SRfHYSFgm/pF7c+UcWQSfHjUtH6OxFUipHznBZs03qFtl insecure@key
+runcmd:
+  - apt-get update && apt-get install -y apt-transport-https docker.io
+  - curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+  - echo 'deb http://apt.kubernetes.io/ kubernetes-xenial main' > /etc/apt/sources.list.d/kubernetes.list
+  - apt-get update
+  - apt-get install -y kubelet kubeadm
+  - shutdown -h now
+EOF
+
+    genisoimage -output $WORKDIR/cloudinit-bootstrap.iso -volid cidata -joliet -rock $WORKDIR/{user,meta}-data &> /dev/null
+
+    virsh vol-create-as --pool $POOL --name cloudinit-bootstrap.iso --capacity $(disk_size "$WORKDIR/cloudinit-bootstrap.iso") --format raw &> /dev/null
+    virsh vol-upload --pool $POOL --vol cloudinit-bootstrap.iso --file $WORKDIR/cloudinit-bootstrap.iso &> /dev/null
+
+    rm -rf $WORKDIR
+}
+
 build_cloudinit() {
     WORKDIR=$(mktemp -d cloudinit-$1-XXXXXXXX)
 
@@ -63,11 +92,6 @@ ssh_authorized_keys:
   - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDYhRewFL7luLkp0L8PD+9nY0NS6mb5HeAf623XKg6Jjyoipvaqgjh4Km5sod0RGxDRFne7uazB0CAt5srovU0nnVmoTBCJYs84/0dHj6X+66GP1qMLCBs/n6cnUBraDi82bBrknXAqEHs4ujHpslmJEaoL4OOJW3Q42e1lWTpLyjqiV2m1YVpTmrHxvDsSfPto+gM4ssKC4YZW4EdUp/BK79GDdj3KiSTqhclvP5m1MLzQ3/Xy3kNr+HfKx8NdHZAF/+qeOcQHwX2OH88mrZvSJppcmR/Ru/yTV13gUs8SRfHYSFgm/pF7c+UcWQSfHjUtH6OxFUipHznBZs03qFtl insecure@key
 runcmd:
   - systemctl restart networking
-  - apt-get update && apt-get install -y apt-transport-https docker.io
-  - curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
-  - echo 'deb http://apt.kubernetes.io/ kubernetes-xenial main' > /etc/apt/sources.list.d/kubernetes.list
-  - apt-get update
-  - apt-get install -y kubelet kubeadm
 EOF
 
     if [[ "$1" =~ ^master ]]; then
@@ -121,7 +145,25 @@ build_volumes() {
         virsh vol-create-as --pool $POOL --name $IMAGE --capacity $(disk_size "tmp/$IMAGE") --format qcow2 --prealloc-metadata &> /dev/null
         virsh vol-upload --pool $POOL --vol $IMAGE --file tmp/$IMAGE &> /dev/null
     fi
-    virsh vol-create-as --pool $POOL --name $1.img --capacity $DISK_SIZE --format qcow2 --backing-vol $IMAGE --backing-vol-format qcow2 &> /dev/null
+    if ! virsh vol-list --pool $POOL | grep $IMAGE_NAME-with-deps.img &> /dev/null; then
+        build_cloudinit_bootstrap
+        virsh vol-create-as --pool $POOL --name $IMAGE_NAME-with-deps.img --capacity $DISK_SIZE --format qcow2 --backing-vol $IMAGE --backing-vol-format qcow2 &> /dev/null
+        virt-install --name image-bootstrap \
+                     --vcpus 2 \
+                     --cpu host \
+                     --ram 2048 \
+                     --autostart \
+                     --memballoon virtio \
+                     --boot hd \
+                     --os-type linux \
+                     --os-variant generic \
+                     --network network=smartbox \
+                     --graphics none \
+                     --disk vol=$POOL/$IMAGE_NAME-with-deps.img,format=qcow2,bus=virtio,cache=writeback \
+                     --disk vol=$POOL/cloudinit-bootstrap.iso,bus=virtio
+        virsh undefine image-bootstrap
+    fi
+    virsh vol-create-as --pool $POOL --name $1.img --capacity $DISK_SIZE --format qcow2 --backing-vol $IMAGE_NAME-with-deps.img --backing-vol-format qcow2 &> /dev/null
     info "Volumes built"
 }
 
