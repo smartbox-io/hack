@@ -99,6 +99,7 @@ EOF
 
     cat > $WORKDIR/user-data <<EOF
 #cloud-config
+password: linux
 hostname: $1
 fqdn: $1.smartbox.io
 ssh_authorized_keys:
@@ -110,8 +111,9 @@ EOF
     if [[ "$1" =~ ^master ]]; then
         cat >> $WORKDIR/user-data <<EOF
   - kubeadm init --apiserver-advertise-address \$(dig $1 +short) --skip-preflight-checks --pod-network-cidr 10.244.0.0/16 --token $(token)
-  - kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/coreos/flannel/v0.8.0/Documentation/kube-flannel.yml
-  - kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/coreos/flannel/v0.8.0/Documentation/kube-flannel-rbac.yml
+  - export KUBECONFIG=/etc/kubernetes/admin.conf
+  - kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.8.0/Documentation/kube-flannel.yml
+  - kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.8.0/Documentation/kube-flannel-rbac.yml
 EOF
     else
         cat >> $WORKDIR/user-data <<EOF
