@@ -206,7 +206,11 @@ build_vm() {
                  --disk vol=$POOL/$machine_id.img,format=qcow2,bus=virtio,cache=writeback \
                  --disk vol=$POOL/cloudinit-$machine_id.iso,bus=virtio &> /dev/null &
     info "Machine $machine_id created"
-    echo $machine_id
+    info "Waiting for DHCP lease for $machine_id..."
+    while ! virsh -q domifaddr $machine_id | grep ipv4; do sleep 0.1; done &> /dev/null
+    machine_ip=$(virsh domifaddr $machine_id | grep ipv4 | awk '{print $4}' | cut -d/ -f1)
+    info "DHCP lease obtained for $machine_id: $machine_ip"
+    echo "$machine_id $machine_ip"
 }
 
 do_create() {
@@ -223,7 +227,7 @@ do_create() {
 do_destroy() {
     [ -f $CLUSTER_FILE ] || fatal "$CLUSTER_FILE does not exist, create first"
 
-    for machine_id in $(cat $CLUSTER_FILE); do
+    for machine_id in $(cat $CLUSTER_FILE | cut -d" " -f1); do
         virsh destroy $machine_id &> /dev/null
         virsh undefine $machine_id --remove-all-storage &> /dev/null
         info "Machine $machine_id destroyed"
