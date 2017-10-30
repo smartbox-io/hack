@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 POOL=${POOL:-default}
-WORKERS=2
+CELLS=2
 LIBVIRT_DEFAULT_URI="qemu:///system"
 DISK_SIZE=10G
 
@@ -15,8 +15,8 @@ while [[ $# > 0 ]] ; do
             export LIBVIRT_DEFAULT_URI="qemu+ssh://$2/system"
             shift
             ;;
-        -w|--workers)
-            WORKERS="$2"
+        --cells)
+            CELLS="$2"
             shift
             ;;
     esac
@@ -202,6 +202,6 @@ build_vm() {
 build_network
 
 build_vm "master"
-for i in $(seq 1 $WORKERS); do
-    build_vm "worker$i"
+for i in $(seq 1 $CELLS); do
+    build_vm "cell$i"
 done
