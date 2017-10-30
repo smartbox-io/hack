@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 
+ACTION="create"
+
 POOL=${POOL:-default}
 CELLS=2
 LIBVIRT_DEFAULT_URI="qemu:///system"
 DISK_SIZE=10G
+CLUSTER_FILE=tmp/cluster.status
 
 IMAGE_NAME=xenial-server-cloudimg-amd64-disk1
 IMAGE=$IMAGE_NAME.img
@@ -19,17 +22,20 @@ while [[ $# > 0 ]] ; do
             CELLS="$2"
             shift
             ;;
+        -d|--destroy)
+            ACTION="destroy"
+            ;;
     esac
     shift
 done
 
 fatal() {
-    echo "$1; quitting"
+    echo "$1; quitting" >&2
     exit 1
 }
 
 info() {
-    echo "[I] $1"
+    echo "[I] $1" >&2
 }
 
 info "Connection to libvirt: $LIBVIRT_DEFAULT_URI"
@@ -180,10 +186,11 @@ build_volumes() {
 }
 
 build_vm() {
-    info "Building machine $1"
-    build_cloudinit $1
-    build_volumes $1
-    virt-install --name $1 \
+    machine_id="$1-$(uuidgen -r)"
+    info "Building machine $machine_id"
+    build_cloudinit $machine_id
+    build_volumes $machine_id
+    virt-install --name $machine_id \
                  --vcpus 2 \
                  --cpu host \
                  --ram 2048 \
@@ -194,14 +201,43 @@ build_vm() {
                  --os-variant generic \
                  --network network=smartbox \
                  --graphics none \
-                 --disk vol=$POOL/$1.img,format=qcow2,bus=virtio,cache=writeback \
-                 --disk vol=$POOL/cloudinit-$1.iso,bus=virtio &> /dev/null &
-    info "Machine $1 created"
+                 --disk vol=$POOL/$machine_id.img,format=qcow2,bus=virtio,cache=writeback \
+                 --disk vol=$POOL/cloudinit-$machine_id.iso,bus=virtio &> /dev/null &
+    info "Machine $machine_id created"
+    echo $machine_id
 }
 
-build_network
+do_create() {
+    [ ! -f $CLUSTER_FILE ] || fatal "$CLUSTER_FILE exists, destroy first"
 
-build_vm "master"
-for i in $(seq 1 $CELLS); do
-    build_vm "cell$i"
-done
+    build_network
+
+    echo $(build_vm "master") > $CLUSTER_FILE
+    for i in $(seq 1 $CELLS); do
+        echo $(build_vm "cell") >> $CLUSTER_FILE
+    done
+}
+
+do_destroy() {
+    [ -f $CLUSTER_FILE ] || fatal "$CLUSTER_FILE does not exist, create first"
+
+    for machine_id in $(cat $CLUSTER_FILE); do
+        virsh destroy $machine_id &> /dev/null
+        virsh undefine $machine_id --remove-all-storage &> /dev/null
+        info "Machine $machine_id destroyed"
+    done
+
+    rm $CLUSTER_FILE
+}
+
+case $ACTION in
+    "create")
+        do_create
+        ;;
+    "destroy")
+        do_destroy
+        ;;
+    *)
+        fatal "unknown action: $ACTION"
+        ;;
+esac
