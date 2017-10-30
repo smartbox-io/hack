@@ -224,9 +224,11 @@ do_create() {
     build_network
 
     echo $(build_vm "master") > $CLUSTER_FILE
+
     for i in $(seq 1 $BRAINS); do
         echo $(build_vm "brain") >> $CLUSTER_FILE
     done
+
     for i in $(seq 1 $CELLS); do
         echo $(build_vm "cell") >> $CLUSTER_FILE
     done
