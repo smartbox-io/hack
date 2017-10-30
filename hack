@@ -3,6 +3,7 @@
 ACTION="create"
 
 POOL=${POOL:-default}
+BRAINS=1
 CELLS=2
 LIBVIRT_DEFAULT_URI="qemu:///system"
 DISK_SIZE=10G
@@ -14,6 +15,10 @@ BASE_URL=https://cloud-images.ubuntu.com/xenial/current
 
 while [[ $# > 0 ]] ; do
     case $1 in
+        --brains)
+            BRAINS="$2"
+            shift
+            ;;
         -c|--connection)
             export LIBVIRT_DEFAULT_URI="qemu+ssh://$2/system"
             shift
@@ -219,6 +224,9 @@ do_create() {
     build_network
 
     echo $(build_vm "master") > $CLUSTER_FILE
+    for i in $(seq 1 $BRAINS); do
+        echo $(build_vm "brain") >> $CLUSTER_FILE
+    done
     for i in $(seq 1 $CELLS); do
         echo $(build_vm "cell") >> $CLUSTER_FILE
     done
