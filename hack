@@ -122,7 +122,7 @@ EOF
 EOF
     else
         cat >> $WORKDIR/user-data <<EOF
-  - kubeadm join --token $(token) master:6443
+  - kubeadm join --token $(token) $(master):6443
 EOF
     fi
 
@@ -216,6 +216,10 @@ build_vm() {
     machine_ip=$(virsh domifaddr $machine_id | grep ipv4 | awk '{print $4}' | cut -d/ -f1)
     info "DHCP lease obtained for $machine_id: $machine_ip"
     echo "$machine_id $machine_ip"
+}
+
+master() {
+  grep master $CLUSTER_FILE | cut -d" " -f1
 }
 
 do_create() {
