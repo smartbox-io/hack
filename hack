@@ -237,7 +237,7 @@ wait_for_dhcp_leases() {
             if ! grep "$machine_id waiting-for-dhcp-lease" $(cluster_file) &> /dev/null; then
                 continue
             fi
-            if virsh domifaddr $machine_id | grep ipv4 &> /dev/null; then
+            if virsh domifaddr $machine_id 2> /dev/null | grep ipv4 &> /dev/null; then
                 machine_ip=$(virsh domifaddr $machine_id | grep ipv4 | awk '{print $4}' | cut -d/ -f1)
                 sed -i "s/$machine_id waiting-for-dhcp-lease/$machine_id $machine_ip/g" $(cluster_file)
                 info "DHCP lease obtained for $machine_id: $machine_ip"
