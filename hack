@@ -15,20 +15,16 @@ BASE_URL=https://cloud-images.ubuntu.com/xenial/current
 
 while [[ $# > 0 ]] ; do
     case $1 in
-        -f|--cluster-file)
-            CLUSTER="$2"
-            shift
-            ;;
         --brains)
             BRAINS="$2"
             shift
             ;;
-        -c|--connection)
-            export LIBVIRT_DEFAULT_URI="qemu+ssh://$2/system"
-            shift
-            ;;
         --cells)
             CELLS="$2"
+            shift
+            ;;
+        -c|--cluster-file)
+            CLUSTER="$2"
             shift
             ;;
         -d|--destroy)
@@ -37,13 +33,13 @@ while [[ $# > 0 ]] ; do
         --destroy-all)
             ACTION="destroy_all"
             ;;
+        -h|--host)
+            export LIBVIRT_DEFAULT_URI="qemu+ssh://$2/system"
+            shift
+            ;;
     esac
     shift
 done
-
-cluster_file() {
-    echo "tmp/clusters/$CLUSTER"
-}
 
 fatal() {
     echo "$1; quitting" >&2
@@ -52,6 +48,14 @@ fatal() {
 
 info() {
     echo "[I] $1" >&2
+}
+
+clusters() {
+    find tmp/clusters -type f | grep -v gitkeep
+}
+
+cluster_file() {
+    echo "tmp/clusters/$CLUSTER"
 }
 
 info "Connection to libvirt: $LIBVIRT_DEFAULT_URI"
@@ -115,7 +119,6 @@ EOF
 
     cat > $WORKDIR/user-data <<EOF
 #cloud-config
-password: linux
 hostname: $1
 fqdn: $1.smartbox.io
 ssh_authorized_keys:
@@ -304,7 +307,7 @@ do_destroy() {
 }
 
 do_destroy_all () {
-    for cluster in $(find tmp/clusters -type f | grep -v gitkeep); do
+    for cluster in $(clusters); do
         CLUSTER=$(echo $cluster | cut -d"/" -f3)
         do_destroy
     done

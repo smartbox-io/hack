@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+
+HOST=
+CLUSTER=
+ACTION="kubectl"
+ARGS=""
+
+while [[ $# > 0 ]] ; do
+    case $1 in
+        -c|--cluster-file)
+            CLUSTER="$2"
+            shift
+            ;;
+        -h|--host)
+            HOST="$2"
+            shift
+            ;;
+        -s|--ssh)
+            ACTION="ssh"
+            ;;
+        -w|--wait)
+            ACTION="wait"
+            ;;
+        *)
+            ARGS+=" $1"
+            ;;
+    esac
+    shift
+done
+
+fatal() {
+    echo "$1; quitting" >&2
+    exit 1
+}
+
+host() {
+    if [ -z $HOST ]; then
+        fatal "no HOST defined"
+    fi
+    echo $HOST
+}
+
+clusters() {
+    find tmp/clusters -type f | grep -v gitkeep | cut -d/ -f3
+}
+
+cluster() {
+    if [ $(clusters | wc -l) -eq "1" ]; then
+        echo $(clusters | head -n1)
+    else
+        if [ -z $CLUSTER ]; then
+            fatal "no CLUSTER defined"
+        fi
+        echo $CLUSTER
+    fi
+}
+
+cluster_file() {
+    echo "tmp/clusters/$(cluster)"
+}
+
+master() {
+    masters | sort -R | head -n1
+}
+
+master_ip() {
+    grep $(master) $(cluster_file) | cut -d" " -f2
+}
+
+masters() {
+    machines | grep master
+}
+
+machines() {
+    cut -d" " -f1 $(cluster_file)
+}
+
+do_kubectl() {
+    ssh -qt -oStrictHostKeyChecking=no -A $(host) ssh -qt -oStrictHostKeyChecking=no ubuntu@$(master_ip) sudo kubectl --kubeconfig=/etc/kubernetes/admin.conf "$ARGS"
+}
+
+do_ssh() {
+    echo "do_ssh"
+}
+
+do_wait() {
+    echo "do_wait"
+}
+
+case $ACTION in
+    "kubectl")
+        do_kubectl
+        ;;
+    "ssh")
+        do_ssh
+        ;;
+    "wait")
+        do_wait
+        ;;
+    *)
+        fatal "unknown action: $ACTION"
+        ;;
+esac
