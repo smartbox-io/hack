@@ -147,7 +147,7 @@ EOF
 
 build_network() {
     network_count=$(virsh net-list | grep smartbox-io | wc -l)
-    network_id="smartbox-io-$(uuidgen -r | cut -d- -f1)"
+    network_id="smartbox-io-$CLUSTER"
     info "Creating network $network_id"
     while true; do
         network_definition=$(mktemp)
@@ -171,7 +171,6 @@ EOF
     virsh net-start $network_id &> /dev/null
     virsh net-autostart $network_id &> /dev/null
     info "Network $network_id configured"
-    echo "network $network_id"
 }
 
 build_volume_base() {
@@ -247,7 +246,7 @@ wait_for_dhcp_leases() {
 }
 
 network() {
-    grep network $(cluster_file) | cut -d " " -f2
+    echo "smartbox-io-$CLUSTER"
 }
 
 master() {
@@ -259,7 +258,7 @@ masters() {
 }
 
 machines() {
-    grep -v network $(cluster_file) | cut -d" " -f1
+    cut -d" " -f1 $(cluster_file)
 }
 
 do_create() {
@@ -267,9 +266,9 @@ do_create() {
 
     [ ! -f $(cluster_file) ] || fatal "$(cluster_file) exists, destroy first"
 
-    build_network > $(cluster_file)
+    build_network
 
-    build_vm "master" >> $(cluster_file)
+    build_vm "master" > $(cluster_file)
 
     for i in $(seq 1 $BRAINS); do
         build_vm "brain-$i" >> $(cluster_file)
