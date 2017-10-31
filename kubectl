@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-HOST=
 CLUSTER=
 ACTION="kubectl"
 ARGS=""
