@@ -7,7 +7,7 @@ BRAINS=1
 CELLS=2
 LIBVIRT_DEFAULT_URI="qemu:///system"
 DISK_SIZE=10G
-CLUSTER=$(uuidgen -r)
+CLUSTER=$(uuidgen -r | cut -d- -f1)
 
 IMAGE_NAME=xenial-server-cloudimg-amd64-disk1
 IMAGE=$IMAGE_NAME.img
@@ -147,7 +147,7 @@ EOF
 
 build_network() {
     network_count=$(virsh net-list | grep smartbox-io | wc -l)
-    network_id="smartbox-io-$(uuidgen -r)"
+    network_id="smartbox-io-$(uuidgen -r | cut -d- -f1)"
     info "Creating network $network_id"
     while true; do
         network_definition=$(mktemp)
@@ -209,7 +209,7 @@ build_volumes() {
 }
 
 build_vm() {
-    machine_id="$1-$(uuidgen -r)"
+    machine_id="$1-$CLUSTER"
     info "Building machine $machine_id"
     build_cloudinit $machine_id
     build_volumes $machine_id
@@ -272,11 +272,11 @@ do_create() {
     build_vm "master" >> $(cluster_file)
 
     for i in $(seq 1 $BRAINS); do
-        build_vm "brain" >> $(cluster_file)
+        build_vm "brain-$i" >> $(cluster_file)
     done
 
     for i in $(seq 1 $CELLS); do
-        build_vm "cell" >> $(cluster_file)
+        build_vm "cell-$i" >> $(cluster_file)
     done
 
     wait_for_dhcp_leases
