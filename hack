@@ -135,13 +135,12 @@ EOF
 }
 
 build_network() {
+    network_id="smartbox-io-$(uuidgen -r)"
     info "Setting network up"
-    virsh net-destroy smartbox &> /dev/null
-    virsh net-undefine smartbox &> /dev/null
     network_definition=$(mktemp)
-    cat > $network_definition <<'EOF'
+    cat > $network_definition <<EOF
       <network>
-        <name>smartbox</name>
+        <name>$network_id</name>
         <bridge name="virbr10"/>
         <forward/>
         <ip address="192.168.200.1" netmask="255.255.255.0">
@@ -153,9 +152,10 @@ build_network() {
       </network>
 EOF
     virsh net-define $network_definition &> /dev/null
-    virsh net-start smartbox &> /dev/null
-    virsh net-autostart smartbox &> /dev/null
+    virsh net-start $network_id &> /dev/null
+    virsh net-autostart $network_id &> /dev/null
     info "Network configured"
+    echo "network $network_id"
 }
 
 build_volume_base() {
@@ -172,7 +172,7 @@ build_volume_base() {
                      --boot hd \
                      --os-type linux \
                      --os-variant generic \
-                     --network network=smartbox \
+                     --network network=$(network) \
                      --graphics none \
                      --disk vol=$POOL/$IMAGE_NAME-with-deps.img,format=qcow2,bus=virtio,cache=writeback \
                      --disk vol=$POOL/cloudinit-bootstrap.iso,bus=virtio &> /dev/null
@@ -206,7 +206,7 @@ build_vm() {
                  --boot hd \
                  --os-type linux \
                  --os-variant generic \
-                 --network network=smartbox \
+                 --network network=$(network) \
                  --graphics none \
                  --disk vol=$POOL/$machine_id.img,format=qcow2,bus=virtio,cache=writeback \
                  --disk vol=$POOL/cloudinit-$machine_id.iso,bus=virtio &> /dev/null &
@@ -218,30 +218,46 @@ build_vm() {
     echo "$machine_id $machine_ip"
 }
 
+network() {
+    grep network $CLUSTER_FILE | cut -d " " -f2
+}
+
 master() {
-  grep master $CLUSTER_FILE | cut -d" " -f1
+    masters | sort -R | head -n1
+}
+
+masters() {
+    machines | grep master
+}
+
+machines() {
+    grep -v network $CLUSTER_FILE | cut -d" " -f1
 }
 
 do_create() {
     [ ! -f $CLUSTER_FILE ] || fatal "$CLUSTER_FILE exists, destroy first"
 
-    build_network
+    build_network > $CLUSTER_FILE
 
-    echo $(build_vm "master") > $CLUSTER_FILE
+    build_vm "master" >> $CLUSTER_FILE
 
     for i in $(seq 1 $BRAINS); do
-        echo $(build_vm "brain") >> $CLUSTER_FILE
+        build_vm "brain" >> $CLUSTER_FILE
     done
 
     for i in $(seq 1 $CELLS); do
-        echo $(build_vm "cell") >> $CLUSTER_FILE
+        build_vm "cell" >> $CLUSTER_FILE
     done
 }
 
 do_destroy() {
     [ -f $CLUSTER_FILE ] || fatal "$CLUSTER_FILE does not exist, create first"
 
-    for machine_id in $(cat $CLUSTER_FILE | cut -d" " -f1); do
+    virsh net-destroy $(network) &> /dev/null
+    virsh net-undefine $(network) &> /dev/null
+    info "Network $(network) destroyed"
+
+    for machine_id in $(machines); do
         virsh destroy $machine_id &> /dev/null
         virsh undefine $machine_id --remove-all-storage &> /dev/null
         info "Machine $machine_id destroyed"
@@ -261,3 +277,5 @@ case $ACTION in
         fatal "unknown action: $ACTION"
         ;;
 esac
+
+info "All set!"
