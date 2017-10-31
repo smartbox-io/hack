@@ -154,7 +154,7 @@ EOF
     virsh net-define $network_definition &> /dev/null
     virsh net-start $network_id &> /dev/null
     virsh net-autostart $network_id &> /dev/null
-    info "Network configured"
+    info "Network $network_id configured"
     echo "network $network_id"
 }
 
@@ -211,11 +211,24 @@ build_vm() {
                  --disk vol=$POOL/$machine_id.img,format=qcow2,bus=virtio,cache=writeback \
                  --disk vol=$POOL/cloudinit-$machine_id.iso,bus=virtio &> /dev/null &
     info "Machine $machine_id created"
-    info "Waiting for DHCP lease for $machine_id..."
-    while ! virsh -q domifaddr $machine_id | grep ipv4; do sleep 0.1; done &> /dev/null
-    machine_ip=$(virsh domifaddr $machine_id | grep ipv4 | awk '{print $4}' | cut -d/ -f1)
-    info "DHCP lease obtained for $machine_id: $machine_ip"
-    echo "$machine_id $machine_ip"
+    echo "$machine_id waiting-for-dhcp-lease"
+}
+
+wait_for_dhcp_leases() {
+    machines=$(machines)
+    info "Waiting for DHCP leases..."
+    while grep waiting-for-dhcp-lease $CLUSTER_FILE &> /dev/null; do
+        for machine_id in $machines; do
+            if ! grep "$machine_id waiting-for-dhcp-lease" $CLUSTER_FILE &> /dev/null; then
+                continue
+            fi
+            if virsh domifaddr $machine_id | grep ipv4 &> /dev/null; then
+                machine_ip=$(virsh domifaddr $machine_id | grep ipv4 | awk '{print $4}' | cut -d/ -f1)
+                sed -i "s/$machine_id waiting-for-dhcp-lease/$machine_id $machine_ip/g" $CLUSTER_FILE
+                info "DHCP lease obtained for $machine_id: $machine_ip"
+            fi
+        done
+    done
 }
 
 network() {
@@ -248,6 +261,8 @@ do_create() {
     for i in $(seq 1 $CELLS); do
         build_vm "cell" >> $CLUSTER_FILE
     done
+
+    wait_for_dhcp_leases
 }
 
 do_destroy() {
