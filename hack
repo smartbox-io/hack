@@ -135,23 +135,28 @@ EOF
 }
 
 build_network() {
+    network_count=$(virsh net-list | grep smartbox-io | wc -l)
     network_id="smartbox-io-$(uuidgen -r)"
     info "Setting network up"
-    network_definition=$(mktemp)
-    cat > $network_definition <<EOF
-      <network>
-        <name>$network_id</name>
-        <bridge name="virbr10"/>
-        <forward/>
-        <ip address="192.168.200.1" netmask="255.255.255.0">
-          <dhcp>
-            <range start="192.168.200.2" end="192.168.200.254"/>
-          </dhcp>
-        </ip>
-        <domain name="smartbox.io" localOnly="yes"/>
-      </network>
+    while true; do
+        network_definition=$(mktemp)
+        cat > $network_definition <<EOF
+          <network>
+          <name>$network_id</name>
+          <bridge name="virbr$(expr 10 + $network_count)"/>
+          <forward/>
+          <ip address="192.168.$(expr 200 + $network_count).1" netmask="255.255.255.0">
+            <dhcp>
+              <range start="192.168.$(expr 200 + $network_count).2" end="192.168.$(expr 200 + $network_count).254"/>
+            </dhcp>
+          </ip>
+          <domain name="smartbox.io" localOnly="yes"/>
+        </network>
 EOF
-    virsh net-define $network_definition &> /dev/null
+        if virsh net-define $network_definition &> /dev/null; then
+            break
+        fi
+    done
     virsh net-start $network_id &> /dev/null
     virsh net-autostart $network_id &> /dev/null
     info "Network $network_id configured"
