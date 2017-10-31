@@ -181,7 +181,7 @@ build_volume_base() {
 }
 
 build_volumes() {
-    info "Building volumes"
+    info "Building volumes for $1"
     if ! virsh vol-list --pool $POOL | grep $IMAGE &> /dev/null; then
         info "Uploading $IMAGE"
         virsh vol-create-as --pool $POOL --name $IMAGE --capacity $(disk_size "tmp/$IMAGE") --format qcow2 --prealloc-metadata &> /dev/null
@@ -189,7 +189,7 @@ build_volumes() {
     fi
     build_volume_base
     virsh vol-create-as --pool $POOL --name $1.img --capacity $DISK_SIZE --format qcow2 --backing-vol $IMAGE_NAME-with-deps.img --backing-vol-format qcow2 &> /dev/null
-    info "Volumes built"
+    info "Volumes built for $1"
 }
 
 build_vm() {
@@ -215,10 +215,9 @@ build_vm() {
 }
 
 wait_for_dhcp_leases() {
-    machines=$(machines)
     info "Waiting for DHCP leases..."
     while grep waiting-for-dhcp-lease $CLUSTER_FILE &> /dev/null; do
-        for machine_id in $machines; do
+        for machine_id in $(machines); do
             if ! grep "$machine_id waiting-for-dhcp-lease" $CLUSTER_FILE &> /dev/null; then
                 continue
             fi
