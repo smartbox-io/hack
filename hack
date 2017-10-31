@@ -5,6 +5,7 @@ ACTION="create"
 POOL=${POOL:-default}
 BRAINS=1
 CELLS=2
+HOST=localhost
 LIBVIRT_DEFAULT_URI="qemu:///system"
 DISK_SIZE=10G
 CLUSTER=$(uuidgen -r | cut -d- -f1)
@@ -34,6 +35,7 @@ while [[ $# > 0 ]] ; do
             ACTION="destroy_all"
             ;;
         -h|--host)
+            HOST="$2"
             export LIBVIRT_DEFAULT_URI="qemu+ssh://$2/system"
             shift
             ;;
@@ -261,7 +263,7 @@ masters() {
 }
 
 machines() {
-    cut -d" " -f1 $(cluster_file)
+    grep -v host $(cluster_file) | cut -d" " -f1
 }
 
 do_create() {
@@ -269,9 +271,11 @@ do_create() {
 
     [ ! -f $(cluster_file) ] || fatal "$(cluster_file) exists, destroy first"
 
+    echo "host $HOST" > $(cluster_file)
+
     build_network
 
-    build_vm "master" > $(cluster_file)
+    build_vm "master" >> $(cluster_file)
 
     for i in $(seq 1 $BRAINS); do
         build_vm "brain-$i" >> $(cluster_file)

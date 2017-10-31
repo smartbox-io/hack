@@ -11,10 +11,6 @@ while [[ $# > 0 ]] ; do
             CLUSTER="$2"
             shift
             ;;
-        -h|--host)
-            HOST="$2"
-            shift
-            ;;
         -s|--ssh)
             ACTION="ssh"
             ;;
@@ -34,10 +30,7 @@ fatal() {
 }
 
 host() {
-    if [ -z $HOST ]; then
-        fatal "no HOST defined"
-    fi
-    echo $HOST
+    grep host $(cluster_file) | cut -d" " -f2
 }
 
 clusters() {
