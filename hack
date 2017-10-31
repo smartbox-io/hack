@@ -7,7 +7,8 @@ BRAINS=1
 CELLS=2
 LIBVIRT_DEFAULT_URI="qemu:///system"
 DISK_SIZE=10G
-CLUSTER_FILE=tmp/cluster.status
+CLUSTER=$(uuidgen -r)
+CLUSTER_FILE=tmp/clusters/$CLUSTER
 
 IMAGE_NAME=xenial-server-cloudimg-amd64-disk1
 IMAGE=$IMAGE_NAME.img
@@ -15,6 +16,11 @@ BASE_URL=https://cloud-images.ubuntu.com/xenial/current
 
 while [[ $# > 0 ]] ; do
     case $1 in
+        -f|--cluster-file)
+            CLUSTER="$2"
+            CLUSTER_FILE=tmp/clusters/$CLUSTER
+            shift
+            ;;
         --brains)
             BRAINS="$2"
             shift
@@ -252,6 +258,8 @@ machines() {
 }
 
 do_create() {
+    info "Creating $CLUSTER cluster"
+
     [ ! -f $CLUSTER_FILE ] || fatal "$CLUSTER_FILE exists, destroy first"
 
     build_network > $CLUSTER_FILE
@@ -267,9 +275,13 @@ do_create() {
     done
 
     wait_for_dhcp_leases
+
+    info "Cluster $CLUSTER created"
 }
 
 do_destroy() {
+    info "Destroying $CLUSTER cluster"
+
     [ -f $CLUSTER_FILE ] || fatal "$CLUSTER_FILE does not exist, create first"
 
     virsh net-destroy $(network) &> /dev/null
@@ -283,6 +295,8 @@ do_destroy() {
     done
 
     rm $CLUSTER_FILE
+
+    info "Cluster $CLUSTER destroyed"
 }
 
 case $ACTION in
