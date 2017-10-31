@@ -8,7 +8,6 @@ CELLS=2
 LIBVIRT_DEFAULT_URI="qemu:///system"
 DISK_SIZE=10G
 CLUSTER=$(uuidgen -r)
-CLUSTER_FILE=tmp/clusters/$CLUSTER
 
 IMAGE_NAME=xenial-server-cloudimg-amd64-disk1
 IMAGE=$IMAGE_NAME.img
@@ -18,7 +17,6 @@ while [[ $# > 0 ]] ; do
     case $1 in
         -f|--cluster-file)
             CLUSTER="$2"
-            CLUSTER_FILE=tmp/clusters/$CLUSTER
             shift
             ;;
         --brains)
@@ -36,9 +34,16 @@ while [[ $# > 0 ]] ; do
         -d|--destroy)
             ACTION="destroy"
             ;;
+        --destroy-all)
+            ACTION="destroy_all"
+            ;;
     esac
     shift
 done
+
+cluster_file() {
+    echo "tmp/clusters/$CLUSTER"
+}
 
 fatal() {
     echo "$1; quitting" >&2
@@ -143,7 +148,7 @@ EOF
 build_network() {
     network_count=$(virsh net-list | grep smartbox-io | wc -l)
     network_id="smartbox-io-$(uuidgen -r)"
-    info "Setting network up"
+    info "Creating network $network_id"
     while true; do
         network_definition=$(mktemp)
         cat > $network_definition <<EOF
@@ -227,14 +232,14 @@ build_vm() {
 
 wait_for_dhcp_leases() {
     info "Waiting for DHCP leases..."
-    while grep waiting-for-dhcp-lease $CLUSTER_FILE &> /dev/null; do
+    while grep waiting-for-dhcp-lease $(cluster_file) &> /dev/null; do
         for machine_id in $(machines); do
-            if ! grep "$machine_id waiting-for-dhcp-lease" $CLUSTER_FILE &> /dev/null; then
+            if ! grep "$machine_id waiting-for-dhcp-lease" $(cluster_file) &> /dev/null; then
                 continue
             fi
             if virsh domifaddr $machine_id | grep ipv4 &> /dev/null; then
                 machine_ip=$(virsh domifaddr $machine_id | grep ipv4 | awk '{print $4}' | cut -d/ -f1)
-                sed -i "s/$machine_id waiting-for-dhcp-lease/$machine_id $machine_ip/g" $CLUSTER_FILE
+                sed -i "s/$machine_id waiting-for-dhcp-lease/$machine_id $machine_ip/g" $(cluster_file)
                 info "DHCP lease obtained for $machine_id: $machine_ip"
             fi
         done
@@ -242,7 +247,7 @@ wait_for_dhcp_leases() {
 }
 
 network() {
-    grep network $CLUSTER_FILE | cut -d " " -f2
+    grep network $(cluster_file) | cut -d " " -f2
 }
 
 master() {
@@ -254,24 +259,24 @@ masters() {
 }
 
 machines() {
-    grep -v network $CLUSTER_FILE | cut -d" " -f1
+    grep -v network $(cluster_file) | cut -d" " -f1
 }
 
 do_create() {
     info "Creating $CLUSTER cluster"
 
-    [ ! -f $CLUSTER_FILE ] || fatal "$CLUSTER_FILE exists, destroy first"
+    [ ! -f $(cluster_file) ] || fatal "$(cluster_file) exists, destroy first"
 
-    build_network > $CLUSTER_FILE
+    build_network > $(cluster_file)
 
-    build_vm "master" >> $CLUSTER_FILE
+    build_vm "master" >> $(cluster_file)
 
     for i in $(seq 1 $BRAINS); do
-        build_vm "brain" >> $CLUSTER_FILE
+        build_vm "brain" >> $(cluster_file)
     done
 
     for i in $(seq 1 $CELLS); do
-        build_vm "cell" >> $CLUSTER_FILE
+        build_vm "cell" >> $(cluster_file)
     done
 
     wait_for_dhcp_leases
@@ -282,7 +287,7 @@ do_create() {
 do_destroy() {
     info "Destroying $CLUSTER cluster"
 
-    [ -f $CLUSTER_FILE ] || fatal "$CLUSTER_FILE does not exist, create first"
+    [ -f $(cluster_file) ] || fatal "$(cluster_file) does not exist, create first"
 
     virsh net-destroy $(network) &> /dev/null
     virsh net-undefine $(network) &> /dev/null
@@ -294,9 +299,16 @@ do_destroy() {
         info "Machine $machine_id destroyed"
     done
 
-    rm $CLUSTER_FILE
+    rm $(cluster_file)
 
     info "Cluster $CLUSTER destroyed"
+}
+
+do_destroy_all () {
+    for cluster in $(find tmp/clusters -type f | grep -v gitkeep); do
+        CLUSTER=$(echo $cluster | cut -d"/" -f3)
+        do_destroy
+    done
 }
 
 case $ACTION in
@@ -305,6 +317,9 @@ case $ACTION in
         ;;
     "destroy")
         do_destroy
+        ;;
+    "destroy_all")
+        do_destroy_all
         ;;
     *)
         fatal "unknown action: $ACTION"
