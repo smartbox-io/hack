@@ -151,10 +151,10 @@ EOF
 }
 
 build_network() {
-    network_count=$(virsh net-list | grep smartbox-io | wc -l)
     network_id="smartbox-io-$CLUSTER"
     info "Creating network $network_id"
     while true; do
+        network_count=$(virsh net-list | grep smartbox-io | wc -l)
         network_definition=$(mktemp)
         cat > $network_definition <<EOF
           <network>
