@@ -3,6 +3,7 @@
 CLUSTER=
 ACTION="kubectl"
 ARGS=""
+SSH_OPTS="-qt -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -A"
 
 while [[ $# > 0 ]] ; do
     case $1 in
@@ -17,7 +18,7 @@ while [[ $# > 0 ]] ; do
             ACTION="wait"
             ;;
         *)
-            ARGS+=" $1"
+            ARGS+="$1 "
             ;;
     esac
     shift
@@ -68,11 +69,12 @@ machines() {
 }
 
 do_kubectl() {
-    ssh -qt -oStrictHostKeyChecking=no -A $(host) ssh -qt -oStrictHostKeyChecking=no ubuntu@$(master_ip) sudo kubectl --kubeconfig=/etc/kubernetes/admin.conf "$ARGS"
+     do_ssh sudo kubectl --kubeconfig=/etc/kubernetes/admin.conf "$ARGS"
 }
 
 do_ssh() {
-    echo "do_ssh"
+    ssh-add key/id_rsa &> /dev/null
+    ssh $SSH_OPTS $(host) ssh $SSH_OPTS ubuntu@$(master_ip) "$@"
 }
 
 do_wait() {

@@ -2,17 +2,17 @@
 
 ACTION="create"
 
-POOL=${POOL:-default}
-BRAINS=1
-CELLS=2
-HOST=localhost
+POOL=${POOL:-"default"}
+BRAINS="1"
+CELLS="2"
+HOST="localhost"
 LIBVIRT_DEFAULT_URI="qemu:///system"
-DISK_SIZE=10G
+DISK_SIZE="10G"
 CLUSTER=$(uuidgen -r | cut -d- -f1)
 
-IMAGE_NAME=xenial-server-cloudimg-amd64-disk1
-IMAGE=$IMAGE_NAME.img
-BASE_URL=https://cloud-images.ubuntu.com/xenial/current
+IMAGE_NAME="xenial-server-cloudimg-amd64-disk1"
+IMAGE="$IMAGE_NAME.img"
+BASE_URL="https://cloud-images.ubuntu.com/xenial/current"
 
 while [[ $# > 0 ]] ; do
     case $1 in
@@ -53,7 +53,7 @@ info() {
 }
 
 clusters() {
-    find tmp/clusters -type f | grep -v gitkeep
+    find tmp/clusters -type f | grep -v gitkeep | cut -d/ -f3
 }
 
 cluster_file() {
@@ -71,7 +71,7 @@ token() {
 }
 
 disk_size() {
-    wc -c $1 | cut -d' ' -f1
+    wc -c $1 | cut -d" " -f1
 }
 
 build_cloudinit_bootstrap() {
@@ -309,7 +309,7 @@ do_destroy() {
 
 do_destroy_all () {
     for cluster in $(clusters); do
-        CLUSTER=$(echo $cluster | cut -d"/" -f3)
+        CLUSTER=$cluster
         do_destroy
     done
 }
