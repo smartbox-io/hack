@@ -62,9 +62,6 @@ cluster_file() {
 
 info "Connection to libvirt: $LIBVIRT_DEFAULT_URI"
 
-SMARTBOX_PATH=$(realpath ${1:-..})
-MANIFESTS_PATH=$(realpath $SMARTBOX_PATH/cluster/manifests)
-
 if [ ! -f tmp/$IMAGE ]; then
     wget $BASE_URL/$IMAGE -O tmp/$IMAGE
 fi
