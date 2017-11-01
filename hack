@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+. utils.sh
+
 ACTION="create"
 
 POOL=${POOL:-"default"}
@@ -8,7 +10,6 @@ CELLS="2"
 HOST="localhost"
 LIBVIRT_DEFAULT_URI="qemu:///system"
 DISK_SIZE="10G"
-CLUSTER=$(uuidgen -r | cut -d- -f1)
 
 IMAGE_NAME="xenial-server-cloudimg-amd64-disk1"
 IMAGE="$IMAGE_NAME.img"
@@ -42,23 +43,6 @@ while [[ $# > 0 ]] ; do
     esac
     shift
 done
-
-fatal() {
-    echo "$1; quitting" >&2
-    exit 1
-}
-
-info() {
-    echo "[I] $1" >&2
-}
-
-clusters() {
-    find tmp/clusters -type f | grep -v gitkeep | cut -d/ -f3
-}
-
-cluster_file() {
-    echo "tmp/clusters/$CLUSTER"
-}
 
 info "Connection to libvirt: $LIBVIRT_DEFAULT_URI"
 
@@ -247,22 +231,6 @@ wait_for_dhcp_leases() {
     done
 }
 
-network() {
-    echo "smartbox-io-$CLUSTER"
-}
-
-master() {
-    masters | sort -R | head -n1
-}
-
-masters() {
-    machines | grep master
-}
-
-machines() {
-    grep -v host $(cluster_file) | cut -d" " -f1
-}
-
 do_create() {
     info "Creating $CLUSTER cluster"
 
@@ -316,6 +284,7 @@ do_destroy_all () {
 
 case $ACTION in
     "create")
+        CLUSTER=$(uuidgen -r | cut -d- -f1)
         do_create
         ;;
     "destroy")
