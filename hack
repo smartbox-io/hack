@@ -24,7 +24,7 @@ while [[ $# > 0 ]] ; do
             CELLS="$2"
             shift
             ;;
-        -c|--cluster-file)
+        -c|--cluster-name)
             CLUSTER="$2"
             shift
             ;;

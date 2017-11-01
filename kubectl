@@ -6,7 +6,7 @@ ARGS=""
 
 while [[ $# > 0 ]] ; do
     case $1 in
-        -c|--cluster-file)
+        -c|--cluster-name)
             CLUSTER="$2"
             shift
             ;;
