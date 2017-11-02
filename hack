@@ -293,7 +293,7 @@ do_destroy_all () {
 do_wait() {
     info "Waiting for all nodes to be ready..."
     ARGS="get nodes"
-    while [ $(./kubectl get nodes | grep -v NotReady | grep Ready | wc -l) -ne $(machines | wc -l) ]; do
+    while [ $(./kubectl -c $(cluster) get nodes | grep -v NotReady | grep Ready | wc -l) -ne $(machines | wc -l) ]; do
         sleep 1
     done
     info "All nodes ready ($(machines | wc -l))"
