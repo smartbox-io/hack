@@ -78,10 +78,10 @@ runcmd:
   - docker pull quay.io/coreos/flannel:v0.8.0-amd64
   - docker pull gcr.io/google_containers/etcd-amd64:3.0.17
   - docker pull gcr.io/google_containers/pause-amd64:3.0
-  - docker pull gcr.io/google_containers/kube-proxy-amd64:v1.8.0
-  - docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.8.0
-  - docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.8.0
-  - docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.8.0
+  - docker pull gcr.io/google_containers/kube-proxy-amd64:v1.8.2
+  - docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.8.2
+  - docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.8.2
+  - docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.8.2
   - shutdown -h now
 EOF
 
