@@ -15,6 +15,11 @@ IMAGE_NAME="xenial-server-cloudimg-amd64-disk1"
 IMAGE="$IMAGE_NAME.img"
 BASE_URL="https://cloud-images.ubuntu.com/xenial/current"
 
+with_libvirt() {
+    export LIBVIRT_DEFAULT_URI="qemu+ssh://$1/system"
+    info "Connection to libvirt: $LIBVIRT_DEFAULT_URI"
+}
+
 while [[ $# > 0 ]] ; do
     case $1 in
         --brains)
@@ -37,7 +42,7 @@ while [[ $# > 0 ]] ; do
             ;;
         -h|--host)
             HOST="$2"
-            export LIBVIRT_DEFAULT_URI="qemu+ssh://$2/system"
+            with_libvirt $2
             shift
             ;;
         -w|--wait)
@@ -46,8 +51,6 @@ while [[ $# > 0 ]] ; do
     esac
     shift
 done
-
-info "Connection to libvirt: $LIBVIRT_DEFAULT_URI"
 
 if [ ! -f tmp/$IMAGE ]; then
     wget $BASE_URL/$IMAGE -O tmp/$IMAGE
@@ -259,6 +262,8 @@ do_create() {
 }
 
 do_destroy() {
+    with_libvirt $(host)
+
     info "Destroying $CLUSTER cluster"
 
     [ -f $(cluster_file) ] || fatal "$(cluster_file) does not exist, create first"
