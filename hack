@@ -34,6 +34,9 @@ while [[ $# > 0 ]] ; do
             export CLUSTER="$2"
             shift
             ;;
+        --debug)
+            set -x
+            ;;
         -d|--destroy)
             ACTION="destroy"
             ;;
