@@ -26,7 +26,7 @@ while [[ $# > 0 ]] ; do
             shift
             ;;
         -c|--cluster-name)
-            CLUSTER="$2"
+            export CLUSTER="$2"
             shift
             ;;
         -d|--destroy)
@@ -39,6 +39,9 @@ while [[ $# > 0 ]] ; do
             HOST="$2"
             export LIBVIRT_DEFAULT_URI="qemu+ssh://$2/system"
             shift
+            ;;
+        -w|--wait)
+            ACTION="wait"
             ;;
     esac
     shift
@@ -282,6 +285,15 @@ do_destroy_all () {
     done
 }
 
+do_wait() {
+    info "Waiting for all nodes to be ready..."
+    ARGS="get nodes"
+    while [ $(./kubectl get nodes | grep -v NotReady | grep Ready | wc -l) -ne $(machines | wc -l) ]; do
+        sleep 1
+    done
+    info "All nodes ready ($(machines | wc -l))"
+}
+
 case $ACTION in
     "create")
         CLUSTER=$(uuidgen -r | cut -d- -f1)
@@ -292,6 +304,9 @@ case $ACTION in
         ;;
     "destroy_all")
         do_destroy_all
+        ;;
+   "wait")
+        do_wait
         ;;
     *)
         fatal "unknown action: $ACTION"

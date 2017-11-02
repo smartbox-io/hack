@@ -15,9 +15,6 @@ while [[ $# > 0 ]] ; do
         -s|--ssh)
             ACTION="ssh"
             ;;
-        -w|--wait)
-            ACTION="wait"
-            ;;
         *)
             ARGS+="$1 "
             ;;
@@ -34,19 +31,12 @@ do_ssh() {
     ssh $SSH_OPTS $(host) ssh $SSH_OPTS ubuntu@$(master_ip) "$@"
 }
 
-do_wait() {
-    echo "do_wait"
-}
-
 case $ACTION in
     "kubectl")
         do_kubectl
         ;;
     "ssh")
         do_ssh
-        ;;
-    "wait")
-        do_wait
         ;;
     *)
         fatal "unknown action: $ACTION"
