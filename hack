@@ -53,6 +53,9 @@ while [[ $# > 0 ]] ; do
             with_libvirt $2
             shift
             ;;
+        -l|--label-nodes)
+            ACTION="label_nodes"
+            ;;
         -w|--wait)
             ACTION="wait"
             ;;
@@ -304,15 +307,25 @@ do_destroy_all () {
 wait_for_pod() {
     info "Waiting for pod $1 to be ready..."
     while true; do
-        if ./kubectl -c $(cluster) get pods --namespace=kube-system | grep Running | grep $1 &> /dev/null; then
+        if ./kubectl get pods --namespace=kube-system | grep Running | grep $1 &> /dev/null; then
             break
         fi
     done
 }
 
+do_label_nodes() {
+    info "Labelling nodes..."
+    for brain in $(brains); do
+        ./kubectl label node $brain type=brain
+    done
+    for cell in $(cells); do
+        ./kubectl label node $cell type=cell
+    done
+}
+
 do_wait() {
     info "Waiting for all nodes to be ready..."
-    while [ $(./kubectl -c $(cluster) get nodes | grep -v NotReady | grep Ready | wc -l) -ne $(machines | wc -l) ]; do
+    while [ $(./kubectl get nodes | grep -v NotReady | grep Ready | wc -l) -ne $(machines | wc -l) ]; do
         sleep 1
     done
     info "All nodes ready ($(machines | wc -l))"
@@ -359,7 +372,10 @@ case $ACTION in
     "destroy_all")
         do_destroy_all
         ;;
-   "wait")
+    "label_nodes")
+        do_label_nodes
+        ;;
+    "wait")
         do_wait
         ;;
     *)

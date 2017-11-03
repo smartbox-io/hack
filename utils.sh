@@ -53,6 +53,14 @@ masters() {
     machines | grep master
 }
 
+brains() {
+    machines | grep brain
+}
+
+cells() {
+    machines | grep cell
+}
+
 machines() {
     grep -v host $(cluster_file) | cut -d" " -f1
 }
