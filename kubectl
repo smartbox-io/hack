@@ -28,7 +28,11 @@ do_kubectl() {
 
 do_ssh() {
     ssh-add key/id_rsa &> /dev/null
-    ssh $SSH_OPTS $(host) ssh $SSH_OPTS ubuntu@$(master_ip) "$@"
+    if [ "$(host)" = "localhost" ]; then
+        ssh $SSH_OPTS ubuntu@$(master_ip) "$@"
+    else
+        ssh $SSH_OPTS $(host) ssh $SSH_OPTS ubuntu@$(master_ip) "$@"
+    fi
 }
 
 case $ACTION in

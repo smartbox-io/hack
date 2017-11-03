@@ -14,12 +14,16 @@ IMAGE_NAME="xenial-server-cloudimg-amd64-disk1"
 IMAGE="$IMAGE_NAME.img"
 BASE_URL="https://cloud-images.ubuntu.com/xenial/current"
 
-export LIBVIRT_DEFAULT_URI="qemu:///system"
-
 with_libvirt() {
-    export LIBVIRT_DEFAULT_URI="qemu+ssh://$1/system"
+    if [ "$1" = "localhost" ]; then
+        export LIBVIRT_DEFAULT_URI="qemu:///system"
+    else
+        export LIBVIRT_DEFAULT_URI="qemu+ssh://$1/system"
+    fi
     info "Connection to libvirt: $LIBVIRT_DEFAULT_URI"
 }
+
+with_libvirt "localhost"
 
 while [[ $# > 0 ]] ; do
     case $1 in
