@@ -10,6 +10,8 @@ CELLS="2"
 HOST="localhost"
 DISK_SIZE="10G"
 
+export LIBVIRT_DEFAULT_URI="qemu:///system"
+
 IMAGE_NAME="xenial-server-cloudimg-amd64-disk1"
 IMAGE="$IMAGE_NAME.img"
 BASE_URL="https://cloud-images.ubuntu.com/xenial/current"
@@ -22,8 +24,6 @@ with_libvirt() {
     fi
     info "Connection to libvirt: $LIBVIRT_DEFAULT_URI"
 }
-
-with_libvirt "localhost"
 
 while [[ $# > 0 ]] ; do
     case $1 in
