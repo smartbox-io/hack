@@ -36,7 +36,7 @@ while [[ $# > 0 ]] ; do
             shift
             ;;
         -c|--cluster-name)
-            export CLUSTER="$2"
+            CLUSTER="$2"
             shift
             ;;
         --debug)
@@ -316,10 +316,18 @@ wait_for_pod() {
 do_label_nodes() {
     info "Labelling nodes..."
     for brain in $(brains); do
-        ./kubectl -c $(cluster) label node $brain type=brain
+        if ./kubectl -c $(cluster) label node $brain type=brain &> /dev/null; then
+            info "Node $brain labelled as brain"
+        else
+            warn "Could not label $brain as brain"
+        fi
     done
     for cell in $(cells); do
-        ./kubectl -c $(cluster) label node $cell type=cell
+        if ./kubectl -c $(cluster) label node $cell type=cell &> /dev/null; then
+            info "Node $cell labelled as cell"
+        else
+            warn "Could not label $cell as cell"
+        fi
     done
 }
 
