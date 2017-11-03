@@ -302,6 +302,28 @@ do_wait() {
     info "All nodes ready ($(machines | wc -l))"
 }
 
+check_requisites() {
+    info "Checking requisites"
+    ERROR=0
+    if ! which genisoimage &> /dev/null; then
+        warn "Please, install 'genisoimage'"
+        ERROR=1
+    fi
+    if ! which uuidgen &> /dev/null; then
+        warn "Please, install 'uuidgen"
+        ERROR=1
+    fi
+    if ! cat /proc/cpuinfo | grep -P "vmx|svm" &> /dev/null; then
+        warn "Virtualization is not supported"
+        ERROR=1
+    fi
+    if [ $ERROR -eq 1 ]; then
+        fatal "Requisites not met"
+    fi
+}
+
+check_requisites
+
 case $ACTION in
     "create")
         CLUSTER=$(uuidgen -r | cut -d- -f1)

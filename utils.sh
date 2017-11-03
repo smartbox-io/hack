@@ -5,6 +5,10 @@ fatal() {
     exit 1
 }
 
+warn() {
+    echo "[W] $1" >&2
+}
+
 info() {
     echo "[I] $1" >&2
 }
