@@ -8,12 +8,13 @@ POOL=${POOL:-"default"}
 BRAINS="1"
 CELLS="2"
 HOST="localhost"
-LIBVIRT_DEFAULT_URI="qemu:///system"
 DISK_SIZE="10G"
 
 IMAGE_NAME="xenial-server-cloudimg-amd64-disk1"
 IMAGE="$IMAGE_NAME.img"
 BASE_URL="https://cloud-images.ubuntu.com/xenial/current"
+
+export LIBVIRT_DEFAULT_URI="qemu:///system"
 
 with_libvirt() {
     export LIBVIRT_DEFAULT_URI="qemu+ssh://$1/system"
