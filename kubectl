@@ -8,6 +8,9 @@ SSH_OPTS="-qt -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -A"
 
 while [[ $# > 0 ]] ; do
     case $1 in
+        -a|--all)
+            ACTION="all"
+            ;;
         -c|--cluster-name)
             CLUSTER="$2"
             shift
@@ -21,6 +24,11 @@ while [[ $# > 0 ]] ; do
     esac
     shift
 done
+
+do_all() {
+    ARGS="get all --all-namespaces"
+    do_kubectl
+}
 
 do_kubectl() {
      do_ssh sudo kubectl --kubeconfig=/etc/kubernetes/admin.conf "$ARGS"
@@ -36,6 +44,9 @@ do_ssh() {
 }
 
 case $ACTION in
+    "all")
+        do_all
+        ;;
     "kubectl")
         do_kubectl
         ;;
