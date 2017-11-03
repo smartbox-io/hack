@@ -96,6 +96,9 @@ runcmd:
   - docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.8.2
   - docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.8.2
   - docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.8.2
+  - docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.5
+  - docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.5
+  - docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.5
   - shutdown -h now
 EOF
 
