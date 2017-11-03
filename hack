@@ -307,7 +307,7 @@ do_destroy_all () {
 wait_for_pod() {
     info "Waiting for pod $1 to be ready..."
     while true; do
-        if ./kubectl get pods --namespace=kube-system | grep Running | grep $1 &> /dev/null; then
+        if ./kubectl -c $(cluster) get pods --namespace=kube-system | grep Running | grep $1 &> /dev/null; then
             break
         fi
     done
@@ -316,16 +316,16 @@ wait_for_pod() {
 do_label_nodes() {
     info "Labelling nodes..."
     for brain in $(brains); do
-        ./kubectl label node $brain type=brain
+        ./kubectl -c $(cluster) label node $brain type=brain
     done
     for cell in $(cells); do
-        ./kubectl label node $cell type=cell
+        ./kubectl -c $(cluster) label node $cell type=cell
     done
 }
 
 do_wait() {
     info "Waiting for all nodes to be ready..."
-    while [ $(./kubectl get nodes | grep -v NotReady | grep Ready | wc -l) -ne $(machines | wc -l) ]; do
+    while [ $(./kubectl -c $(cluster) get nodes | grep -v NotReady | grep Ready | wc -l) -ne $(machines | wc -l) ]; do
         sleep 1
     done
     info "All nodes ready ($(machines | wc -l))"
