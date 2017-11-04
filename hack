@@ -201,13 +201,13 @@ build_volume_base() {
 build_volumes() {
     info "Building volumes for $1"
     if ! virsh vol-list --pool $POOL | grep $IMAGE &> /dev/null; then
-        if [ ! -f tmp/$IMAGE ]; then
+        if [ ! -f /tmp/$IMAGE ]; then
             info "Downloading $IMAGE"
-            wget $BASE_URL/$IMAGE -O tmp/$IMAGE
+            wget $BASE_URL/$IMAGE -O /tmp/$IMAGE
         fi
         info "Uploading $IMAGE"
-        virsh vol-create-as --pool $POOL --name $IMAGE --capacity $(disk_size "tmp/$IMAGE") --format qcow2 --prealloc-metadata &> /dev/null
-        virsh vol-upload --pool $POOL --vol $IMAGE --file tmp/$IMAGE &> /dev/null
+        virsh vol-create-as --pool $POOL --name $IMAGE --capacity $(disk_size "/tmp/$IMAGE") --format qcow2 --prealloc-metadata &> /dev/null
+        virsh vol-upload --pool $POOL --vol $IMAGE --file /tmp/$IMAGE &> /dev/null
     fi
     build_volume_base
     virsh vol-create-as --pool $POOL --name $1.img --capacity $DISK_SIZE --format qcow2 --backing-vol $IMAGE_NAME-with-deps.img --backing-vol-format qcow2 &> /dev/null
