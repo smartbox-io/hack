@@ -197,6 +197,8 @@ build_volume_base() {
                      --graphics none \
                      --disk vol=$POOL/$IMAGE_NAME-with-deps.img,format=qcow2,bus=virtio,cache=writeback \
                      --disk vol=$POOL/cloudinit-bootstrap.iso,bus=virtio &> /dev/null
+        # On TTY lacking environments, wait for virt-install to finish
+        while virsh list | grep image-bootstrap &> /dev/null; do continue; done
         virsh undefine image-bootstrap &> /dev/null
     fi
 }
@@ -333,9 +335,7 @@ do_label_nodes() {
 
 do_wait() {
     info "Waiting for all nodes to be ready..."
-    while [ $(./kubectl -c $(cluster) get nodes | grep -v NotReady | grep Ready | wc -l) -ne $(machines | wc -l) ]; do
-        sleep 1
-    done
+    while [ $(./kubectl -c $(cluster) get nodes | grep -v NotReady | grep Ready | wc -l) -ne $(machines | wc -l) ]; do continue; done
     info "All nodes ready ($(machines | wc -l))"
     wait_for_pod "etcd-master"
     wait_for_pod "kube-apiserver-master"
