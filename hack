@@ -172,7 +172,6 @@ EOF
     done
     virsh net-start $network_id &> /dev/null
     virsh net-autostart $network_id &> /dev/null
-    info "Network $network_id configured"
 }
 
 build_volume_base() {
@@ -327,7 +326,7 @@ do_label_nodes() {
 do_wait() {
     info "Waiting for all nodes to be ready..."
     while [ $(./kubectl -c $(cluster) get nodes 2> /dev/null | grep -v NotReady | grep Ready | wc -l) -ne $(machines | wc -l) ]; do continue; done
-    info "All nodes ready ($(machines | wc -l))"
+    info "All nodes ready ($(machines | wc -l) machines)"
 }
 
 check_requisites() {
