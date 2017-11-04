@@ -63,10 +63,6 @@ while [[ $# > 0 ]] ; do
     shift
 done
 
-if [ ! -f tmp/$IMAGE ]; then
-    wget $BASE_URL/$IMAGE -O tmp/$IMAGE
-fi
-
 token() {
     echo "e6ac8e.43f6980db7a3d88d"
 }
@@ -206,6 +202,10 @@ build_volume_base() {
 build_volumes() {
     info "Building volumes for $1"
     if ! virsh vol-list --pool $POOL | grep $IMAGE &> /dev/null; then
+        if [ ! -f tmp/$IMAGE ]; then
+            info "Downloading $IMAGE"
+            wget $BASE_URL/$IMAGE -O tmp/$IMAGE
+        fi
         info "Uploading $IMAGE"
         virsh vol-create-as --pool $POOL --name $IMAGE --capacity $(disk_size "tmp/$IMAGE") --format qcow2 --prealloc-metadata &> /dev/null
         virsh vol-upload --pool $POOL --vol $IMAGE --file tmp/$IMAGE &> /dev/null
