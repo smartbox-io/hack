@@ -4,7 +4,7 @@
 
 ACTION="kubectl"
 ARGS=""
-SSH_OPTS="-qt -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -A"
+SSH_OPTS="-q -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -A"
 
 while [[ $# > 0 ]] ; do
     case $1 in
