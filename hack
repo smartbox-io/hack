@@ -216,6 +216,8 @@ build_volumes() {
 
 build_vm() {
     virsh pool-create-as --name default --type dir --target /var/lib/libvirt/images &> /dev/null
+    virsh pool-start --name default &> /dev/null
+    virsh pool-autostart --name default &> /dev/null
     machine_id="$1-$CLUSTER"
     info "Building machine $machine_id"
     build_cloudinit $machine_id
