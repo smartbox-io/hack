@@ -135,7 +135,7 @@ EOF
 EOF
     else
         cat >> $WORKDIR/user-data <<EOF
-  - kubeadm join --token $(token) $(master):6443
+  - kubeadm join --skip-preflight-checks --token $(token) $(master):6443
 EOF
     fi
 
