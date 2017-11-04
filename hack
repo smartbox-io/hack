@@ -306,15 +306,6 @@ do_destroy_all () {
     done
 }
 
-wait_for_pod() {
-    info "Waiting for pod $1 to be ready..."
-    while true; do
-        if ./kubectl -c $(cluster) get pods --namespace=kube-system | grep Running | grep $1 &> /dev/null; then
-            break
-        fi
-    done
-}
-
 do_label_nodes() {
     info "Labelling nodes..."
     for brain in $(brains); do
@@ -337,14 +328,6 @@ do_wait() {
     info "Waiting for all nodes to be ready..."
     while [ $(./kubectl -c $(cluster) get nodes 2> /dev/null | grep -v NotReady | grep Ready | wc -l) -ne $(machines | wc -l) ]; do continue; done
     info "All nodes ready ($(machines | wc -l))"
-    wait_for_pod "etcd-master"
-    wait_for_pod "kube-apiserver-master"
-    wait_for_pod "kube-scheduler-master"
-    wait_for_pod "kube-controller-manager-master"
-    wait_for_pod "kube-dns"
-    wait_for_pod "kube-flannel"
-    wait_for_pod "kube-proxy"
-    info "All services are running"
 }
 
 check_requisites() {
