@@ -4,7 +4,7 @@
 
 ACTION="kubectl"
 ARGS=""
-SSH_OPTS="-q -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -A"
+SSH_OPTS="-q -i key/id_rsa -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -A"
 
 while [[ $# > 0 ]] ; do
     case $1 in
@@ -35,8 +35,7 @@ do_kubectl() {
 }
 
 do_ssh() {
-    chmod 600 key/id_rsa &> /dev/null
-    ssh-add key/id_rsa &> /dev/null
+    chmod 600 key/id_rsa
     if [ "$(host)" = "localhost" ]; then
         ssh $SSH_OPTS ubuntu@$(master_ip) "$@"
     else
