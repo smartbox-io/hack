@@ -35,7 +35,7 @@ do_kubectl() {
 }
 
 do_ssh() {
-    chmod 600 key/id_rsa
+    chmod 600 key/id_rsa &> /dev/null
     if [ "$(host)" = "localhost" ]; then
         ssh $SSH_OPTS ubuntu@$(master_ip) "$@"
     else
