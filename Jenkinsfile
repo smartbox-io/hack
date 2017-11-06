@@ -1,7 +1,7 @@
 pipeline {
   agent any
   parameters {
-    string(name: "INTEGRATION_COMMIT", defaultValue: "master", description: "Integration project commit to build with")
+    string(name: "INTEGRATION_BRANCH", defaultValue: "master", description: "Integration project branch to build with")
   }
   stages {
     stage("Retrieve build environment") {
@@ -12,12 +12,11 @@ pipeline {
         }
       }
     }
-    stage("Run integration tests") {
+    stage("Integration tests") {
       steps {
         script {
-          build job: "integration/master", parameters: [
-            string(name: "INTEGRATION_COMMIT", value: INTEGRATION_COMMIT),
-            string(name: "HACK_COMMIT", value: GIT_COMMIT)
+          build job: "integration/${INTEGRATION_BRANCH}", parameters: [
+            string(name: "HACK_BRANCH", value: GIT_BRANCH)
           ]
         }
       }
