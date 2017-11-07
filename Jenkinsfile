@@ -16,7 +16,7 @@ pipeline {
         script {
           build job: "integration/master", parameters: [
             text(name: "COMMIT_MESSAGE", value: GIT_COMMIT_MESSAGE),
-            string(name: "HACK_BRANCH", value: GIT_BRANCH),
+            string(name: "HACK_PR", value: "${CHANGE_ID}"),
             string(name: "CELL_NUMBER", value: CELL_NUMBER)
           ]
         }
