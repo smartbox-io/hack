@@ -17,7 +17,6 @@ pipeline {
           build job: "integration/master", parameters: [
             text(name: "COMMIT_MESSAGE", value: GIT_COMMIT_MESSAGE),
             string(name: "HACK_COMMIT", value: GIT_COMMIT),
-            string(name: "HACK_PR", value: env.CHANGE_ID),
             string(name: "CELL_NUMBER", value: CELL_NUMBER)
           ]
         }
