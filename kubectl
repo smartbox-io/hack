@@ -32,7 +32,7 @@ do_all() {
 }
 
 do_kubectl() {
-     do_ssh sudo kubectl --kubeconfig=/etc/kubernetes/admin.conf "$ARGS"
+    do_ssh sudo kubectl --kubeconfig=/etc/kubernetes/admin.conf "$ARGS"
 }
 
 do_ssh() {

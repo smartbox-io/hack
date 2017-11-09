@@ -27,6 +27,9 @@ with_libvirt() {
 
 while [[ $# > 0 ]] ; do
     case $1 in
+        -a|--apply)
+            ACTION="apply"
+            ;;
         --brains)
             BRAINS="$2"
             shift
@@ -255,6 +258,13 @@ wait_for_dhcp_leases() {
     done
 }
 
+do_apply() {
+    secret_key_base=$(echo -n 23d75ee9669f891c9fe0d1ed61c0cb66c611e5610fc3d608f9617d00380ba8867c92b6605e140facc50dc916443ffe775dfcdc92ceb5ffce69e316d021c2f9bd | base64 | tr -d '\n')
+    mysql_root_password=$(echo -n root | base64 | tr -d '\n')
+    find ../cluster/manifests -type f -name '*-template.yaml' | xargs cat | sed "s/YOUR_SECRET_KEY_BASE_HERE/$secret_key_base/" | sed "s/YOUR_MYSQL_ROOT_PASSWORD_HERE/$mysql_root_password/" | ./kubectl apply -f -
+    find ../cluster/manifests -type f -name '*.yaml' -not -name '*-template.yaml' | xargs cat | ./kubectl apply -f -
+}
+
 do_create() {
     info "Creating $CLUSTER cluster"
 
@@ -355,6 +365,9 @@ check_requisites() {
 check_requisites
 
 case $ACTION in
+    "apply")
+        do_apply
+        ;;
     "create")
         CLUSTER=$(uuidgen -r | cut -d- -f1)
         do_create
