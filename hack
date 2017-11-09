@@ -16,6 +16,8 @@ IMAGE_NAME="xenial-server-cloudimg-amd64-disk1"
 IMAGE="$IMAGE_NAME.img"
 BASE_URL="https://cloud-images.ubuntu.com/xenial/current"
 
+KUBERNETES_VERSION="v1.8.3"
+
 with_libvirt() {
     if [ "$1" = "localhost" ]; then
         export LIBVIRT_DEFAULT_URI="qemu:///system"
@@ -84,7 +86,7 @@ EOF
     cat > $WORKDIR/user-data <<EOF
 #cloud-config
 ssh_authorized_keys:
-  - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDYhRewFL7luLkp0L8PD+9nY0NS6mb5HeAf623XKg6Jjyoipvaqgjh4Km5sod0RGxDRFne7uazB0CAt5srovU0nnVmoTBCJYs84/0dHj6X+66GP1qMLCBs/n6cnUBraDi82bBrknXAqEHs4ujHpslmJEaoL4OOJW3Q42e1lWTpLyjqiV2m1YVpTmrHxvDsSfPto+gM4ssKC4YZW4EdUp/BK79GDdj3KiSTqhclvP5m1MLzQ3/Xy3kNr+HfKx8NdHZAF/+qeOcQHwX2OH88mrZvSJppcmR/Ru/yTV13gUs8SRfHYSFgm/pF7c+UcWQSfHjUtH6OxFUipHznBZs03qFtl insecure@key
+  - $(cat key/id_rsa.pub | tr -d '\n')
 runcmd:
   - apt-get update && apt-get install -y apt-transport-https docker.io
   - curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
@@ -94,10 +96,10 @@ runcmd:
   - docker pull quay.io/coreos/flannel:v0.8.0-amd64
   - docker pull gcr.io/google_containers/etcd-amd64:3.0.17
   - docker pull gcr.io/google_containers/pause-amd64:3.0
-  - docker pull gcr.io/google_containers/kube-proxy-amd64:v1.8.2
-  - docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.8.2
-  - docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.8.2
-  - docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.8.2
+  - docker pull gcr.io/google_containers/kube-proxy-amd64:$KUBERNETES_VERSION
+  - docker pull gcr.io/google_containers/kube-apiserver-amd64:$KUBERNETES_VERSION
+  - docker pull gcr.io/google_containers/kube-scheduler-amd64:$KUBERNETES_VERSION
+  - docker pull gcr.io/google_containers/kube-controller-manager-amd64:$KUBERNETES_VERSION
   - docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.5
   - docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.5
   - docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.5
@@ -131,7 +133,7 @@ EOF
 
     if [[ "$1" =~ ^master ]]; then
         cat >> $WORKDIR/user-data <<EOF
-  - kubeadm init --apiserver-advertise-address \$(dig $1 +short) --skip-preflight-checks --pod-network-cidr 10.244.0.0/16 --token $(token)
+  - kubeadm init --apiserver-advertise-address \$(dig $1 +short) --kubernetes-version $KUBERNETES_VERSION --skip-preflight-checks --pod-network-cidr 10.244.0.0/16 --token $(token)
   - export KUBECONFIG=/etc/kubernetes/admin.conf
   - kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.8.0/Documentation/kube-flannel.yml
   - kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.8.0/Documentation/kube-flannel-rbac.yml
