@@ -4,7 +4,7 @@
 
 ACTION="kubectl"
 ARGS=""
-SSH_LOCAL_OPTS="-tt -q -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -A"
+SSH_LOCAL_OPTS="-t -q -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -A"
 SSH_OPTS="-i key/id_rsa $SSH_LOCAL_OPTS"
 
 while [[ $# > 0 ]] ; do
