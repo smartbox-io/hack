@@ -230,7 +230,7 @@ build_vm() {
     virt-install --name $machine_id \
                  --vcpus 2 \
                  --cpu host \
-                 --ram 2048 \
+                 --ram 1024 \
                  --autostart \
                  --memballoon virtio \
                  --boot hd \
