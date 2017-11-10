@@ -61,8 +61,11 @@ while [[ $# > 0 ]] ; do
         -l|--label-nodes)
             ACTION="label_nodes"
             ;;
-        -w|--wait)
-            ACTION="wait"
+        --wait-for-cluster)
+            ACTION="wait_for_cluster"
+            ;;
+        --wait-for-cells)
+            ACTION="wait_for_cells"
             ;;
     esac
     shift
@@ -338,10 +341,16 @@ do_label_nodes() {
     done
 }
 
-do_wait() {
+do_wait_for_cluster() {
     info "Waiting for all nodes to be ready..."
     while [ $(./kubectl -c $(cluster) get nodes 2> /dev/null | grep -v NotReady | grep Ready | wc -l) -ne $(machines | wc -l) ]; do continue; done
     info "All nodes ready ($(machines | wc -l) machines)"
+}
+
+do_wait_for_cells() {
+    info "Waiting for all cells to register..."
+    while [ $(./kubectl exec -it $(./kubectl get pods | egrep '^brain-\w{10}-\w{5}' | awk '{print $1}') -c brain brain cell ls | grep cell | wc -l) -ne $(cells | wc -l) ]; do continue; done
+    info "All cells ready ($(cells | wc -l))"
 }
 
 check_requisites() {
@@ -383,8 +392,11 @@ case $ACTION in
     "label_nodes")
         do_label_nodes
         ;;
-    "wait")
-        do_wait
+    "wait_for_cluster")
+        do_wait_for_cluster
+        ;;
+    "wait_for_cells")
+        do_wait_for_cells
         ;;
     *)
         fatal "unknown action: $ACTION"
