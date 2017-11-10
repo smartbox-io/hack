@@ -9,14 +9,14 @@ SSH_OPTS="-i key/id_rsa $SSH_LOCAL_OPTS"
 
 while [[ $# > 0 ]] ; do
     case $1 in
-        -a|--all)
+        --all)
             ACTION="all"
             ;;
-        -c|--cluster-name)
+        --cluster-name)
             CLUSTER="$2"
             shift
             ;;
-        -s|--ssh)
+        --ssh)
             ACTION="ssh"
             ;;
         *)
