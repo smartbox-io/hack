@@ -106,6 +106,15 @@ runcmd:
   - docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.5
   - docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.5
   - docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.5
+EOF
+
+    for image in $(find ../cluster/manifests -type f -name '*.yaml' | xargs cat | grep "image:" | sed 's/\s*image:\s*//' | sort | uniq | grep -v smartbox); do
+      cat >> $WORKDIR/user-data <<EOF
+  - docker pull $image
+EOF
+    done
+
+    cat >> $WORKDIR/user-data <<EOF
   - shutdown -h now
 EOF
 
