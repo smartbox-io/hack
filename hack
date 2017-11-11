@@ -127,7 +127,7 @@ EOF
     cat > $WORKDIR/user-data <<EOF
 #cloud-config
 hostname: $1
-fqdn: $1.smartbox.io
+fqdn: $1.smartbox.local
 ssh_authorized_keys:
   - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDYhRewFL7luLkp0L8PD+9nY0NS6mb5HeAf623XKg6Jjyoipvaqgjh4Km5sod0RGxDRFne7uazB0CAt5srovU0nnVmoTBCJYs84/0dHj6X+66GP1qMLCBs/n6cnUBraDi82bBrknXAqEHs4ujHpslmJEaoL4OOJW3Q42e1lWTpLyjqiV2m1YVpTmrHxvDsSfPto+gM4ssKC4YZW4EdUp/BK79GDdj3KiSTqhclvP5m1MLzQ3/Xy3kNr+HfKx8NdHZAF/+qeOcQHwX2OH88mrZvSJppcmR/Ru/yTV13gUs8SRfHYSFgm/pF7c+UcWQSfHjUtH6OxFUipHznBZs03qFtl insecure@key
 runcmd:
@@ -171,7 +171,7 @@ build_network() {
               <range start="192.168.$(expr 200 + $network_count).2" end="192.168.$(expr 200 + $network_count).254"/>
             </dhcp>
           </ip>
-          <domain name="smartbox.io" localOnly="yes"/>
+          <domain name="smartbox.local" localOnly="yes"/>
         </network>
 EOF
         if virsh net-define $network_definition &> /dev/null; then
