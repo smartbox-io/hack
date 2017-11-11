@@ -266,8 +266,8 @@ wait_for_dhcp_leases() {
 do_apply() {
     secret_key_base=$(echo -n 23d75ee9669f891c9fe0d1ed61c0cb66c611e5610fc3d608f9617d00380ba8867c92b6605e140facc50dc916443ffe775dfcdc92ceb5ffce69e316d021c2f9bd | base64 | tr -d '\n')
     mysql_root_password=$(echo -n root | base64 | tr -d '\n')
-    find ../cluster/manifests -type f -name '*-template.yaml' | xargs cat | sed "s/YOUR_SECRET_KEY_BASE_HERE/$secret_key_base/" | sed "s/YOUR_MYSQL_ROOT_PASSWORD_HERE/$mysql_root_password/" | ./kubectl apply -f -
-    find ../cluster/manifests -type f -name '*.yaml' -not -name '*-template.yaml' | xargs cat | ./kubectl apply -f -
+    find ../cluster/manifests -type f -name '*-template.yaml' | xargs cat | sed "s/YOUR_SECRET_KEY_BASE_HERE/$secret_key_base/" | sed "s/YOUR_MYSQL_ROOT_PASSWORD_HERE/$mysql_root_password/" | ./kubectl --cluster $(cluster) apply -f -
+    find ../cluster/manifests -type f -name '*.yaml' -not -name '*-template.yaml' | xargs cat | ./kubectl --cluster $(cluster) apply -f -
 }
 
 do_create() {
@@ -326,14 +326,14 @@ do_destroy_all () {
 do_label_nodes() {
     info "Labelling nodes..."
     for brain in $(brains); do
-        if ./kubectl -c $(cluster) label node $brain type=brain &> /dev/null; then
+        if ./kubectl --cluster $(cluster) label node $brain type=brain &> /dev/null; then
             info "Node $brain labelled as brain"
         else
             warn "Could not label $brain as brain"
         fi
     done
     for cell in $(cells); do
-        if ./kubectl -c $(cluster) label node $cell type=cell &> /dev/null; then
+        if ./kubectl --cluster $(cluster) label node $cell type=cell &> /dev/null; then
             info "Node $cell labelled as cell"
         else
             warn "Could not label $cell as cell"
@@ -343,13 +343,13 @@ do_label_nodes() {
 
 do_wait_for_cluster() {
     info "Waiting for all nodes to be ready..."
-    while [ $(./kubectl -c $(cluster) get nodes 2> /dev/null | grep -v NotReady | grep Ready | wc -l) -ne $(machines | wc -l) ]; do continue; done
+    while [ $(./kubectl --cluster $(cluster) get nodes 2> /dev/null | grep -v NotReady | grep Ready | wc -l) -ne $(machines | wc -l) ]; do continue; done
     info "All nodes ready ($(machines | wc -l) machines)"
 }
 
 do_wait_for_cells() {
     info "Waiting for all cells to register..."
-    while [ $(./kubectl exec -it $(./kubectl get pods | egrep '^brain-\w{10}-\w{5}' | awk '{print $1}') -c brain brain cell ls | grep cell | wc -l) -ne $(cells | wc -l) ]; do continue; done
+    while [ $(./kubectl --cluster $(cluster) exec -it $(./kubectl --cluster $(cluster) get pods | egrep '^brain-\w{10}-\w{5}' | awk '{print $1}') -c brain brain cell ls | grep cell | wc -l) -ne $(cells | wc -l) ]; do continue; done
     info "All cells ready ($(cells | wc -l))"
 }
 

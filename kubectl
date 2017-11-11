@@ -12,7 +12,7 @@ while [[ $# > 0 ]] ; do
         --all)
             ACTION="all"
             ;;
-        --cluster-name)
+        --cluster)
             CLUSTER="$2"
             shift
             ;;
