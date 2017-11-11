@@ -403,5 +403,3 @@ case $ACTION in
         fatal "unknown action: $ACTION"
         ;;
 esac
-
-info "All set!"
