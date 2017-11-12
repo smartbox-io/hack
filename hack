@@ -2,7 +2,7 @@
 
 . utils.sh
 
-ACTION="create"
+ACTION=
 
 POOL=${POOL:-"default"}
 BRAINS="1"
@@ -40,9 +40,12 @@ while [[ $# > 0 ]] ; do
             CELLS="$2"
             shift
             ;;
-        -c|--cluster-name)
+        --cluster-name)
             CLUSTER="$2"
             shift
+            ;;
+        -c|--create)
+            ACTION="create"
             ;;
         --debug)
             set -x
@@ -66,6 +69,9 @@ while [[ $# > 0 ]] ; do
             ;;
         --wait-for-cells)
             ACTION="wait_for_cells"
+            ;;
+        *)
+            fatal "Unknown argument: $1"
             ;;
     esac
     shift
