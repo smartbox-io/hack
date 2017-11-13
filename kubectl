@@ -3,7 +3,6 @@
 . utils.sh
 
 ACTION="kubectl"
-ARGS=""
 SSH_LOCAL_OPTS="-t -q -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -A"
 SSH_OPTS="-i key/id_rsa $SSH_LOCAL_OPTS"
 
@@ -18,21 +17,22 @@ while [[ $# > 0 ]] ; do
             ;;
         --ssh)
             ACTION="ssh"
+            shift
+            break
             ;;
         *)
-            ARGS+="$1 "
+            break
             ;;
     esac
     shift
 done
 
 do_all() {
-    ARGS="get all --all-namespaces"
-    do_kubectl
+    do_kubectl "get all --all-namespaces"
 }
 
 do_kubectl() {
-    do_ssh sudo kubectl --kubeconfig=/etc/kubernetes/admin.conf "$ARGS"
+    do_ssh sudo kubectl --kubeconfig=/etc/kubernetes/admin.conf "$@"
 }
 
 do_ssh() {
@@ -50,10 +50,10 @@ case $ACTION in
         do_all
         ;;
     "kubectl")
-        do_kubectl
+        do_kubectl "$@"
         ;;
     "ssh")
-        do_ssh
+        do_ssh "$@"
         ;;
     *)
         fatal "unknown action: $ACTION"
