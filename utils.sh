@@ -61,6 +61,10 @@ cells() {
     machines | grep cell
 }
 
+toolings() {
+    machines | grep tooling
+}
+
 machines() {
     grep -v host $(cluster_file) | cut -d" " -f1
 }

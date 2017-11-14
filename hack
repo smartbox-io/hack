@@ -295,6 +295,7 @@ do_create() {
     build_network
 
     build_vm "master" >> $(cluster_file)
+    build_vm "tooling" >> $(cluster_file)
 
     for i in $(seq 1 $BRAINS); do
         build_vm "brain-$i" >> $(cluster_file)
@@ -352,6 +353,13 @@ do_label_nodes() {
             info "Node $cell labelled as cell"
         else
             warn "Could not label $cell as cell"
+        fi
+    done
+    for tooling in $(toolings); do
+        if ./kubectl --cluster $(cluster) label node $tooling type=tooling &> /dev/null; then
+            info "Node $tooling labelled as tooling"
+        else
+            warn "Could not label $tooling as tooling"
         fi
     done
 }
