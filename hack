@@ -70,6 +70,9 @@ while [[ $# > 0 ]] ; do
         --wait-for-cells)
             ACTION="wait_for_cells"
             ;;
+        --integration)
+            ACTION="integration"
+            ;;
         *)
             fatal "Unknown argument: $1"
             ;;
@@ -156,6 +159,14 @@ EOF
   - kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.8.0/Documentation/kube-flannel.yml
   - kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.8.0/Documentation/kube-flannel-rbac.yml
 EOF
+    elif [[ "$1" =~ ^cell ]]; then
+        cat >> $WORKDIR/user-data <<EOF
+  - echo "n\\n\\n\\n\\n\\nw\\n" | fdisk /dev/vdc
+  - mkfs.ext4 /dev/vdc1
+  - echo "n\\n\\n\\n\\n\\nw\\n" | fdisk /dev/vdd
+  - mkfs.ext4 /dev/vdd1
+  - kubeadm join --skip-preflight-checks --token $(token) $(master):6443
+EOF
     else
         cat >> $WORKDIR/user-data <<EOF
   - kubeadm join --skip-preflight-checks --token $(token) $(master):6443
@@ -234,6 +245,10 @@ build_volumes() {
     fi
     build_volume_base
     virsh vol-create-as --pool $POOL --name $1.img --capacity $DISK_SIZE --format qcow2 --backing-vol $IMAGE_NAME-with-deps.img --backing-vol-format qcow2 &> /dev/null
+    if [[ "$1" =~ ^cell ]]; then
+        virsh vol-create-as --pool $POOL --name $1-storage1.img --capacity $DISK_SIZE --format qcow2 &> /dev/null
+        virsh vol-create-as --pool $POOL --name $1-storage2.img --capacity $DISK_SIZE --format qcow2 &> /dev/null
+    fi
     info "Volumes built for $1"
 }
 
@@ -245,19 +260,37 @@ build_vm() {
     info "Building machine $machine_id"
     build_cloudinit $machine_id
     build_volumes $machine_id
-    virt-install --name $machine_id \
-                 --vcpus 2 \
-                 --cpu host \
-                 --ram 1024 \
-                 --autostart \
-                 --memballoon virtio \
-                 --boot hd \
-                 --os-type linux \
-                 --os-variant generic \
-                 --network network=$(network) \
-                 --graphics none \
-                 --disk vol=$POOL/$machine_id.img,format=qcow2,bus=virtio,cache=writeback \
-                 --disk vol=$POOL/cloudinit-$machine_id.iso,bus=virtio &> /dev/null &
+    if [[ "$1" =~ ^cell ]]; then
+        virt-install --name $machine_id \
+                     --vcpus 2 \
+                     --cpu host \
+                     --ram 1024 \
+                     --autostart \
+                     --memballoon virtio \
+                     --boot hd \
+                     --os-type linux \
+                     --os-variant generic \
+                     --network network=$(network) \
+                     --graphics none \
+                     --disk vol=$POOL/$machine_id.img,format=qcow2,bus=virtio,cache=writeback \
+                     --disk vol=$POOL/cloudinit-$machine_id.iso,bus=virtio \
+                     --disk vol=$POOL/$machine_id-storage1.img,format=qcow2,bus=virtio,cache=writeback \
+                     --disk vol=$POOL/$machine_id-storage2.img,format=qcow2,bus=virtio,cache=writeback &> /dev/null &
+    else
+        virt-install --name $machine_id \
+                     --vcpus 2 \
+                     --cpu host \
+                     --ram 1024 \
+                     --autostart \
+                     --memballoon virtio \
+                     --boot hd \
+                     --os-type linux \
+                     --os-variant generic \
+                     --network network=$(network) \
+                     --graphics none \
+                     --disk vol=$POOL/$machine_id.img,format=qcow2,bus=virtio,cache=writeback \
+                     --disk vol=$POOL/cloudinit-$machine_id.iso,bus=virtio &> /dev/null &
+    fi
     info "Machine $machine_id created"
     echo "$machine_id waiting-for-dhcp-lease"
 }
@@ -377,6 +410,10 @@ do_wait_for_cells() {
     info "All cells ready ($(cells | wc -l))"
 }
 
+do_integration() {
+    echo "do_integration"
+}
+
 check_requisites() {
     info "Checking requisites"
     ERROR=0
@@ -421,6 +458,9 @@ case $ACTION in
         ;;
     "wait_for_cells")
         do_wait_for_cells
+        ;;
+    "integration")
+        do_integration
         ;;
     *)
         fatal "unknown action: $ACTION"
