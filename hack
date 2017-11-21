@@ -405,8 +405,8 @@ do_wait_for_cluster() {
 
 do_wait_for_cells() {
     info "Waiting for all cells to register..."
-    while ! ./kubectl --cluster $(cluster) get pods | grep Running | egrep '^brain-\w+-\w+' &> /dev/null; do continue; done
-    while [ $(./kubectl --cluster $(cluster) exec -it $(./kubectl --cluster $(cluster) get pods 2>/dev/null | egrep '^brain-\w{10}-\w{5}' | awk '{print $1}') -c brain brain cell ls | grep cell | wc -l 2> /dev/null) -ne $(cells | wc -l) ]; do continue; done &> /dev/null
+    while ! ./kubectl --cluster $(cluster) get pods --no-headers -l app=brain | grep Running &> /dev/null; do continue; done
+    while [ $(./kubectl --cluster $(cluster) exec -it $(./kubectl --cluster $(cluster) get pods --no-headers -l app=brain 2>/dev/null | awk '{print $1}') -c brain brain cell ls | grep cell | wc -l 2> /dev/null) -ne $(cells | wc -l) ]; do continue; done &> /dev/null
     info "All cells ready ($(cells | wc -l))"
 }
 
