@@ -16,7 +16,9 @@ IMAGE_NAME="xenial-server-cloudimg-amd64-disk1"
 IMAGE="$IMAGE_NAME.img"
 BASE_URL="https://cloud-images.ubuntu.com/xenial/current"
 
-KUBERNETES_VERSION="v1.8.3"
+KUBERNETES_VERSION="1.8.3"
+KUBERNETES_PACKAGE_VERSION="$KUBERNETES_VERSION-00"
+CONTROL_PLANE_VERSION="v$KUBERNETES_VERSION"
 
 with_libvirt() {
     if [ "$1" = "localhost" ]; then
@@ -104,14 +106,14 @@ runcmd:
   - curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
   - echo 'deb http://apt.kubernetes.io/ kubernetes-xenial main' > /etc/apt/sources.list.d/kubernetes.list
   - apt-get update
-  - apt-get install -y kubelet kubeadm
+  - apt-get install -y kubelet=$KUBERNETES_PACKAGE_VERSION kubeadm=$KUBERNETES_PACKAGE_VERSION
   - docker pull quay.io/coreos/flannel:v0.8.0-amd64
   - docker pull gcr.io/google_containers/etcd-amd64:3.0.17
   - docker pull gcr.io/google_containers/pause-amd64:3.0
-  - docker pull gcr.io/google_containers/kube-proxy-amd64:$KUBERNETES_VERSION
-  - docker pull gcr.io/google_containers/kube-apiserver-amd64:$KUBERNETES_VERSION
-  - docker pull gcr.io/google_containers/kube-scheduler-amd64:$KUBERNETES_VERSION
-  - docker pull gcr.io/google_containers/kube-controller-manager-amd64:$KUBERNETES_VERSION
+  - docker pull gcr.io/google_containers/kube-proxy-amd64:$CONTROL_PLANE_VERSION
+  - docker pull gcr.io/google_containers/kube-apiserver-amd64:$CONTROL_PLANE_VERSION
+  - docker pull gcr.io/google_containers/kube-scheduler-amd64:$CONTROL_PLANE_VERSION
+  - docker pull gcr.io/google_containers/kube-controller-manager-amd64:$CONTROL_PLANE_VERSION
   - docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.5
   - docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.5
   - docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.5
@@ -154,7 +156,7 @@ EOF
 
     if [[ "$1" =~ ^master ]]; then
         cat >> $WORKDIR/user-data <<EOF
-  - kubeadm init --apiserver-advertise-address \$(dig $1 +short) --kubernetes-version $KUBERNETES_VERSION --skip-preflight-checks --pod-network-cidr 10.244.0.0/16 --token $(token)
+  - kubeadm init --apiserver-advertise-address \$(dig $1 +short) --kubernetes-version $CONTROL_PLANE_VERSION --skip-preflight-checks --pod-network-cidr 10.244.0.0/16 --token $(token)
   - export KUBECONFIG=/etc/kubernetes/admin.conf
   - kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.8.0/Documentation/kube-flannel.yml
   - kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.8.0/Documentation/kube-flannel-rbac.yml
